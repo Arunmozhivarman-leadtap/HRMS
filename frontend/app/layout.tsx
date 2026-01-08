@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { fontSans, fontSerif } from "../lib/fonts";
 import "./globals.css";
 import { cn } from "../lib/utils";
+import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "HRMS System",
@@ -22,8 +23,9 @@ export default function RootLayout({
           fontSerif.variable
         )}
       >
-        {children}
-        hi
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

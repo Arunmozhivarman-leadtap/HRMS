@@ -15,6 +15,7 @@ import {
   PieChart
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { logout } from "@/lib/api";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -56,7 +57,10 @@ export function Sidebar() {
         })}
       </div>
       <div className="border-t p-4">
-        <button className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive">
+        <button 
+          onClick={() => logout()}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        >
           <LogOut className="h-4 w-4" />
           Sign Out
         </button>
