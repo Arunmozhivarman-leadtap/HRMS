@@ -1,0 +1,40 @@
+{
+    "super_admin": [
+      "view_all_employees",
+      "create_offer",
+      "approve_leave",
+      "generate_experience_cert",
+      "process_salary_revision",
+      "process_offboarding",
+      "view_reports_all",
+      "manage_system_config"
+    ],
+    "hr_admin": [
+      "view_all_employees",
+      "create_offer",
+      "approve_leave",
+      "upload_document_any",
+      "generate_experience_cert",
+      "view_reports_all",
+      "process_salary_revision",
+      "process_offboarding"
+    ],
+    "manager": [
+      "view_team_employees",
+      "approve_leave_team",
+      "upload_document_team",
+      "view_reports_team",
+      "conduct_review_team"
+    ],
+    "employee": [
+      "view_self",
+      "apply_leave",
+      "upload_document_self",
+      "view_reports_self",
+      "view_own_review"
+    ],
+    "candidate": [
+      "upload_onboarding_documents",
+      "view_own_offer"
+    ]
+  }

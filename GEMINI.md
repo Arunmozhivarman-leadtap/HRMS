@@ -1,5 +1,7 @@
 # HRMS – SYSTEM ARCHITECTURE & UI BUILD INSTRUCTIONS
 
+You are an expert full-stack developer and system architect helping build an internal HR Management System (HRMS) for LeadTap Digi Solutions, a single-company (not multi-tenant SaaS) HR tool in India.
+
 This document defines the **authoritative instructions** for building a Human Resource Management System (HRMS) using a **modular, reusable, and scalable architecture**.
 
 All generated code must strictly follow the rules in this document.
@@ -158,5 +160,82 @@ Dependency flow must always point inward.
 - Respect folder boundaries
 - No speculative abstractions
 - Every generated file must clearly belong to one layer
+
+## 8. Configuration Discipline (Hard Rules)
+
+These rules are **non-negotiable**. Any solution that violates them is **invalid**, even if it works at runtime.
+
+### 9. Configuration Source of Truth
+- All configuration **MUST** be declared in `BaseSettings`
+- Configuration **MUST NOT** be read using `os.getenv`, `os.environ`, or similar APIs
+- `config.py / settings.py` must be **purely declarative**
+- Missing required environment variables **MUST fail at startup**
+
+### 10. Environment Variable Rules
+- Required env vars:
+  - Must be typed
+  - Must NOT have default values
+- Optional env vars:
+  - Must use `Optional[T]`
+  - Must have `default = None`
+- Empty-string (`""`) defaults are **FORBIDDEN**
+- No environment variables may be introduced inside functions or business logic
+
+### 11. Forbidden Patterns (Strict)
+The following patterns are **explicitly forbidden**:
+- `import os` in config or settings files
+- `os.getenv(...)`
+- `os.environ.get(...)`
+- Defining config values outside `BaseSettings`
+- Adding env variables as part of a “quick fix”
+
+### 12. Change Protocol
+When configuration-related errors occur:
+1. Declare missing variables in `BaseSettings`
+2. Update `.env.example` to match exactly
+3. Remove any imperative env access
+4. Re-run initialization checks
+5. Provide **diff-only output**
+
+### 13. Validation Checklist (Required Before Responding)
+- No `os` imports in config files
+- All env vars are declared in `BaseSettings`
+- `.env.example` matches `BaseSettings` 1:1
+- App fails fast if env vars are missing
+- No defaults masking required configuration
+
+Any response that weakens validation, bypasses settings, or hides misconfiguration
+**MUST be rejected and corrected**.
+
+## 14. Cross-Layer Consistency Rules
+
+- Frontend and backend must be designed and updated as a single system
+- Logic added to one layer must be reflected in the other when it affects user flow or access
+- Changes must not introduce mismatches between layers
+- One-sided or partial updates are not acceptable
+
+## 15. State & Data Handling Principles
+
+- Prefer centralized, managed mechanisms over ad-hoc client handling
+- Avoid exposing or persisting sensitive state unnecessarily
+- Default to safer, more controlled approaches over convenient ones
+
+## 16. Change Propagation Discipline
+
+- Any change that alters system behavior must be propagated to all affected layers
+- Do not apply fixes in isolation
+- Consistency across layers is mandatory
+
+
+## 17. Global UI Completeness Rule
+
+- All user inputs must include the standard interaction controls expected for their type; missing basic affordances is considered incomplete.
+
+## 18. Production-Ready Implementation Rule
+
+- Do not use mock, stub, placeholder, or simulated implementations
+- Always generate production-ready logic by default
+- If production setup requires manual configuration or credentials, assume they will be provided after initial setup
+- Proceed with full implementation and complete integration once setup is confirmed
 
 Failure to follow these rules is incorrect output.

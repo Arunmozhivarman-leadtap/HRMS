@@ -3176,29 +3176,7 @@ Performance Reviews     5 years after exit      Archived
 
 ## 8. Technical Architecture
 
-### 8.1 Recommended Stack
-
-  -----------------------------------------------------------------------
-  Layer                   Technology              Notes
-  ----------------------- ----------------------- -----------------------
-  Frontend                React / Next.js         Responsive, PWA capable
-
-  Backend                 Node.js / Python        REST API
-
-  Database                PostgreSQL              Primary data store
-
-  File Storage            S3-compatible           Encrypted document
-                                                  storage
-
-  Search                  Elasticsearch           Optional, for large
-                                                  deployments
-
-  Queue                   Redis / RabbitMQ        Background jobs
-
-Cache                   Redis                   Session, frequent data
-  -----------------------------------------------------------------------
-
-### 8.2 Security Requirements
+### 8.1 Security Requirements
 
   -----------------------------------------------------------------------
   Requirement                         Implementation
@@ -3220,7 +3198,7 @@ Cache                   Redis                   Session, frequent data
 Penetration Testing                 Annual requirement
   -----------------------------------------------------------------------
 
-### 8.3 Scalability Considerations
+### 8.2 Scalability Considerations
 
   -----------------------------------------------------------------------
   Aspect                              Approach
@@ -3234,7 +3212,7 @@ Penetration Testing                 Annual requirement
 API                                 Rate limiting, caching
   -----------------------------------------------------------------------
 
-### 8.4 Deployment Options
+### 8.3 Deployment Options
 
   -----------------------------------------------------------------------
   Option                              Best For
@@ -3356,5 +3334,14 @@ West Bengal                         WB S&E Act, Durga Puja holidays
                                                         specification
 
   -----------------------------------------------------------------------
+
+
+## Commercialization Potential (Future Consideration)
+
+This system is currently designed and implemented for **internal use only** by LeadTap Digi Solutions to manage its employees and HR operations.
+
+While the architecture and specifications do not actively target commercial distribution or external adoption at this stage, they do not preclude future evaluation for broader use if business needs evolve.
+
+Any decision to commercialize, generalize, or offer this system beyond internal use would require a separate assessment and specification update.
 
 *End of Specification Document*
