@@ -47,9 +47,10 @@ export function LeaveHistoryTable({ applications, isLoading, variant = 'self' }:
         }
     }
 
+
     if (isLoading) {
         return (
-             <Card className="bg-background border shadow-sm flex flex-col min-h-[400px]">
+            <Card className="bg-background border shadow-sm flex flex-col min-h-[400px]">
                 <CardHeader className="border-b border-border/40 pb-4">
                     <CardTitle className="text-xl font-serif font-medium text-foreground">Leave History</CardTitle>
                     <CardDescription>Recent leave applications and their status.</CardDescription>
@@ -66,7 +67,7 @@ export function LeaveHistoryTable({ applications, isLoading, variant = 'self' }:
 
     return (
         <>
-            <ConfirmDialog 
+            <ConfirmDialog
                 isOpen={!!idToDelete}
                 onClose={() => setIdToDelete(null)}
                 onConfirm={handleCancel}
@@ -83,15 +84,15 @@ export function LeaveHistoryTable({ applications, isLoading, variant = 'self' }:
                         Recent leave applications and their status.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0 flex-1 flex flex-col">
-                    <div className="overflow-x-auto flex-1">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-muted/30 text-muted-foreground [&_th]:font-medium [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider">
+                <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+                    <div className="overflow-auto max-h-[360px] flex-1">
+                        <table className="w-full text-sm text-left border-collapse">
+                            <thead className="bg-muted/90 backdrop-blur-sm text-muted-foreground [&_th]:font-medium [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider sticky top-0 z-10 shadow-sm">
                                 <tr className="border-b border-border/40">
                                     {(variant === 'team' || variant === 'admin') && <th className="h-10 px-6 align-middle">Employee</th>}
                                     <th className="h-10 px-6 align-middle">Type & Reason</th>
                                     <th className="h-10 px-6 align-middle">Dates & Duration</th>
-                                    <th className="h-10 px-6 align-middle">Status & Note</th>
+                                    <th className="h-10 px-6 align-middle">Status</th>
                                     {variant === 'self' && <th className="h-10 px-6 align-middle text-right">Actions</th>}
                                 </tr>
                             </thead>
@@ -122,7 +123,12 @@ export function LeaveHistoryTable({ applications, isLoading, variant = 'self' }:
                                                 <div className="font-medium text-foreground">{app.leave_type_name}</div>
                                                 <div className="text-xs text-muted-foreground mt-0.5 max-w-[250px]">{app.reason}</div>
                                                 {app.attachment && (
-                                                    <a href={app.attachment} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline mt-2">
+                                                    <a
+                                                        href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/leaves/applications/${app.id}/attachment`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline mt-2 bg-transparent border-none cursor-pointer p-0"
+                                                    >
                                                         <Upload className="h-2.5 w-2.5" /> View Attachment
                                                     </a>
                                                 )}
@@ -152,17 +158,17 @@ export function LeaveHistoryTable({ applications, isLoading, variant = 'self' }:
                                                 <td className="p-6 align-middle text-right">
                                                     {app.status === 'pending' ? (
                                                         <div className="flex justify-end items-center gap-2">
-                                                            <ApplyLeaveDialog 
-                                                                application={app} 
+                                                            <ApplyLeaveDialog
+                                                                application={app}
                                                                 trigger={
                                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
                                                                         <Pencil className="h-4 w-4" />
                                                                     </Button>
                                                                 }
                                                             />
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
                                                                 className="h-8 w-8 text-muted-foreground hover:text-red-600"
                                                                 onClick={() => setIdToDelete(app.id)}
                                                             >

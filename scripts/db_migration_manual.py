@@ -31,6 +31,13 @@ def migrate():
         except Exception as e:
             print(f" - Error adding requires_document: {e}")
 
+        print("Checking/Adding columns to leave_applications...")
+        try:
+            conn.execute(text("ALTER TABLE leave_applications ADD COLUMN IF NOT EXISTS approver_note TEXT"))
+            print(" - 'approver_note' column checked/added.")
+        except Exception as e:
+            print(f" - Error adding approver_note: {e}")
+
         conn.commit()
     
     print("Running Base.metadata.create_all to create new tables if missing...")

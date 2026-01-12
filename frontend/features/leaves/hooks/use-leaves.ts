@@ -150,13 +150,14 @@ export const useApplyLeave = () => {
     const { toast } = useToast();
 
     return useMutation({
-        mutationFn: (data: LeaveApplicationCreate) => applyLeave(data),
+        mutationFn: ({ data, attachment }: { data: LeaveApplicationCreate, attachment?: File }) => applyLeave(data, attachment),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["my-leave-applications"] });
             queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
             toast({
                 title: "Application Submitted",
                 description: "Your leave application has been submitted successfully.",
+                variant: "success",
             });
         },
         onError: (error: Error) => {
@@ -174,13 +175,15 @@ export const useUpdateLeave = () => {
     const { toast } = useToast();
 
     return useMutation({
-        mutationFn: ({ id, data }: { id: number, data: LeaveApplicationCreate }) => updateLeave(id, data),
+        mutationFn: ({ id, data, attachment, clearAttachment }: { id: number, data: LeaveApplicationCreate, attachment?: File, clearAttachment?: boolean }) =>
+            updateLeave(id, data, attachment, clearAttachment),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["my-leave-applications"] });
             queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
             toast({
                 title: "Application Updated",
                 description: "Your leave application has been updated successfully.",
+                variant: "success",
             });
         },
         onError: (error: Error) => {
@@ -278,6 +281,7 @@ export const useRequestLeaveCredit = () => {
             toast({
                 title: "Credit Request Submitted",
                 description: "Your request for leave credit has been submitted.",
+                variant: "success",
             });
         },
         onError: (error: Error) => {

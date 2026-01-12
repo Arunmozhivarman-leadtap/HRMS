@@ -1,27 +1,53 @@
-// Simplified toast hook
+
+"use client"
+
 import * as React from "react"
 
-type ToastProps = {
+export type ToastVariant = "default" | "destructive" | "success"
+
+export interface Toast {
+    id: string
     title?: string
     description?: string
-    variant?: "default" | "destructive"
+    variant?: ToastVariant
 }
 
-export function useToast() {
-    const [toasts, setToasts] = React.useState<ToastProps[]>([])
+type ToastAction =
+    | { type: "ADD_TOAST"; toast: Toast }
+    | { type: "REMOVE_TOAST"; id: string }
 
-    const toast = ({ title, description, variant = "default" }: ToastProps) => {
-        // For now, just log to console or alert since we don't have a Toaster component yet
-        // In a real app this would dispatch to a global context
-        console.log(`Toast: ${title} - ${description} (${variant})`)
-        // if (variant === 'destructive' && description) {
-        //     console.error(description)
-        // }
+const toastEvents = new Set<(action: ToastAction) => void>()
+
+export function useToast() {
+    const toast = ({ title, description, variant = "default" }: Omit<Toast, "id">) => {
+        const id = Math.random().toString(36).substring(2, 9)
+        const toastAction: ToastAction = {
+            type: "ADD_TOAST",
+            toast: { id, title, description, variant }
+        }
+        toastEvents.forEach(cb => cb(toastAction))
+
+        // Auto remove
+        setTimeout(() => {
+            toastEvents.forEach(cb => cb({ type: "REMOVE_TOAST", id }))
+        }, 5000)
+
+        return id
     }
 
     return {
         toast,
-        toasts,
-        dismiss: (id?: string) => {}
+        dismiss: (id: string) => {
+            toastEvents.forEach(cb => cb({ type: "REMOVE_TOAST", id }))
+        }
     }
+}
+
+export function useToastEvents(callback: (action: ToastAction) => void) {
+    React.useEffect(() => {
+        toastEvents.add(callback)
+        return () => {
+            toastEvents.delete(callback)
+        }
+    }, [callback])
 }

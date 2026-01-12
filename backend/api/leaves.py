@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Form, File, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import date
@@ -87,13 +88,34 @@ def get_all_balances(
 
 @router.post("/apply", response_model=LeaveApplicationResponse)
 def apply_leave(
-    application: LeaveApplicationCreate,
+    leave_type_id: int = Form(...),
+    duration_type: str = Form("Full Day"),
+    from_date: date = Form(...),
+    to_date: Optional[date] = Form(None),
+    number_of_days: float = Form(...),
+    reason: str = Form(...),
+    contact_email: Optional[str] = Form(None),
+    contact_phone: Optional[str] = Form(None),
+    attachment: Optional[UploadFile] = File(None),
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     if not current_user.employee_id:
         raise HTTPException(status_code=400, detail="User is not linked to an employee record")
-    return leave_service.apply_leave(db, application, current_user.employee_id)
+    
+    application_data = LeaveApplicationCreate(
+        leave_type_id=leave_type_id,
+        duration_type=duration_type,
+        from_date=from_date,
+        to_date=to_date,
+        number_of_days=number_of_days,
+        reason=reason,
+        contact_email=contact_email,
+        contact_phone=contact_phone
+    )
+    
+    # We pass the attachment separately to the service
+    return leave_service.apply_leave(db, application_data, current_user.employee_id, attachment)
 
 @router.get("/applications/my", response_model=List[LeaveApplicationResponse])
 def get_my_applications(
@@ -177,13 +199,34 @@ def reject_leave_request(
 @router.put("/update/{application_id}", response_model=LeaveApplicationResponse)
 def update_leave_request(
     application_id: int,
-    application: LeaveApplicationCreate,
+    leave_type_id: int = Form(...),
+    duration_type: str = Form("Full Day"),
+    from_date: date = Form(...),
+    to_date: Optional[date] = Form(None),
+    number_of_days: float = Form(...),
+    reason: str = Form(...),
+    contact_email: Optional[str] = Form(None),
+    contact_phone: Optional[str] = Form(None),
+    attachment: Optional[UploadFile] = File(None),
+    clear_attachment: bool = Form(False),
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     if not current_user.employee_id:
         raise HTTPException(status_code=400, detail="User is not linked to an employee record")
-    return leave_service.update_leave(db, application_id, application, current_user.employee_id)
+        
+    application_data = LeaveApplicationCreate(
+        leave_type_id=leave_type_id,
+        duration_type=duration_type,
+        from_date=from_date,
+        to_date=to_date,
+        number_of_days=number_of_days,
+        reason=reason,
+        contact_email=contact_email,
+        contact_phone=contact_phone
+    )
+    
+    return leave_service.update_leave(db, application_id, application_data, current_user.employee_id, attachment, clear_attachment)
 
 @router.delete("/cancel/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
 def cancel_leave_request(
@@ -212,6 +255,34 @@ def get_holidays(
     db: Session = Depends(get_db)
 ):
     return leave_repository.get_holidays(db, year)
+
+@router.get("/applications/{application_id}/attachment")
+def get_leave_attachment(
+    application_id: int,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from backend.utils.file_storage import get_file_stream
+    import os
+    
+    app = leave_repository.get_application(db, application_id)
+    if not app or not app.attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    
+    # Check authorization
+    if current_user.role == 'employee' and current_user.employee_id != app.employee_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    try:
+        file_stream = get_file_stream(app.attachment)
+        filename = os.path.basename(app.attachment)
+        return StreamingResponse(
+            file_stream(),
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"File error: {str(e)}")
 
 # --- Credit Request Endpoints ---
 

@@ -80,6 +80,7 @@ export interface LeaveApplication {
     contact_phone?: string;
     employee_name?: string;
     leave_type_name?: string;
+    approver_note?: string;
     created_at: string;
     updated_at?: string;
 }

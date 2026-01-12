@@ -15,6 +15,7 @@ class EmployeeBase(BaseModel):
     employment_type: str = "full-time"
     role: str = "employee"
     is_active: bool = True
+    gender: Optional[str] = None
     department_id: Optional[int] = None
     manager_id: Optional[int] = None
     

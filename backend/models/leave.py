@@ -92,6 +92,7 @@ class LeaveApplication(Base):
     approved_date = Column(DateTime(timezone=True), nullable=True)
     contact_email = Column(String(255), nullable=True)
     contact_phone = Column(String(10), nullable=True)
+    approver_note = Column(Text, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

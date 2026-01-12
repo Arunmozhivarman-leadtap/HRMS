@@ -18,10 +18,26 @@ export const getMyLeaveBalances = async (year?: number): Promise<LeaveBalance[]>
     return fetcher<LeaveBalance[]>(`/leaves/balances/my${query}`);
 };
 
-export const applyLeave = async (data: LeaveApplicationCreate): Promise<LeaveApplication> => {
+export const applyLeave = async (data: LeaveApplicationCreate, attachment?: File): Promise<LeaveApplication> => {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+            // Handle dates
+            if (value instanceof Date) {
+                formData.append(key, value.toISOString().split('T')[0]);
+            } else {
+                formData.append(key, value.toString());
+            }
+        }
+    });
+
+    if (attachment) {
+        formData.append("attachment", attachment);
+    }
+
     return fetcher<LeaveApplication>("/leaves/apply", {
         method: "POST",
-        body: JSON.stringify(data),
+        body: formData,
     });
 };
 
@@ -48,10 +64,29 @@ export const rejectLeave = async (id: number, note?: string): Promise<LeaveAppli
     });
 };
 
-export const updateLeave = async (id: number, data: LeaveApplicationCreate): Promise<LeaveApplication> => {
+export const updateLeave = async (id: number, data: LeaveApplicationCreate, attachment?: File, clearAttachment?: boolean): Promise<LeaveApplication> => {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+            if (value instanceof Date) {
+                formData.append(key, value.toISOString().split('T')[0]);
+            } else {
+                formData.append(key, value.toString());
+            }
+        }
+    });
+
+    if (attachment) {
+        formData.append("attachment", attachment);
+    }
+
+    if (clearAttachment) {
+        formData.append("clear_attachment", "true");
+    }
+
     return fetcher<LeaveApplication>(`/leaves/update/${id}`, {
         method: "PUT",
-        body: JSON.stringify(data),
+        body: formData,
     });
 };
 

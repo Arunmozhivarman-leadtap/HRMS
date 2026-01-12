@@ -31,7 +31,7 @@ export default function EmployeeLeavesPage() {
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Request Credit
                     </Button>
-                    <ApplyLeaveDialog />
+                    <ApplyLeaveDialog applications={applications} />
                 </div>
             </div>
 

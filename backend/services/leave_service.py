@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, UploadFile
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from backend.repositories.leave_repository import leave_repository
@@ -10,6 +10,7 @@ from backend.models.leave_credit import LeaveCreditRequest, LeaveCreditStatus
 from backend.models.employee import Employee
 from backend.schemas.leave import LeaveApplicationCreate
 from backend.schemas.leave_credit import LeaveCreditRequestCreate
+from backend.utils.file_storage import upload_file, delete_file
 
 class LeaveService:
     def initialize_leave_types(self, db: Session):
@@ -58,9 +59,6 @@ class LeaveService:
         target_month = 12 if year < current_date.year else current_date.month
         
         for lt in leave_types:
-            if lt.accrual_method != 'monthly':
-                continue # Skip manual or other accruals for now
-
             # Check if balance record exists
             balance = leave_repository.get_balance(db, employee_id, lt.id, year)
             if not balance:
@@ -68,39 +66,48 @@ class LeaveService:
                     employee_id=employee_id, 
                     leave_type_id=lt.id, 
                     leave_year=year,
-                    available=0
+                    available=0,
+                    opening_balance=0,
+                    accrued=0,
+                    taken=0,
+                    pending_approval=0,
+                    carry_forward=0
                 )
                 leave_repository.create_balance(db, balance)
 
-            monthly_entitlement = Decimal(str(lt.annual_entitlement)) / 12
-            total_accrued = Decimal(0)
+            if lt.accrual_method == 'monthly':
+                monthly_entitlement = Decimal(str(lt.annual_entitlement)) / 12
+                total_accrued = Decimal(0)
 
-            # Iterate months to calculate accrual
-            for month in range(1, target_month + 1):
-                # Check joining date logic
-                if employee.date_of_joining:
-                    join_date = employee.date_of_joining
-                    if join_date.year > year:
-                        continue # Not joined yet
-                    if join_date.year == year and join_date.month > month:
-                        continue # Joined after this month
-                    if join_date.year == year and join_date.month == month:
-                        # Joining month logic
-                        if join_date.day <= 10:
-                            total_accrued += monthly_entitlement
-                        elif join_date.day <= 20:
-                            total_accrued += monthly_entitlement / 2
-                        else:
-                            total_accrued += 0
-                        continue
+                # Iterate months to calculate accrual
+                for month in range(1, target_month + 1):
+                    # Check joining date logic
+                    if employee.date_of_joining:
+                        join_date = employee.date_of_joining
+                        if join_date.year > year:
+                            continue # Not joined yet
+                        if join_date.year == year and join_date.month > month:
+                            continue # Joined after this month
+                        if join_date.year == year and join_date.month == month:
+                            # Joining month logic
+                            if join_date.day <= 10:
+                                total_accrued += monthly_entitlement
+                            elif join_date.day <= 20:
+                                total_accrued += monthly_entitlement / 2
+                            else:
+                                total_accrued += 0
+                            continue
+    
+                    # Standard month
+                    total_accrued += monthly_entitlement
 
-                # Standard month
-                total_accrued += monthly_entitlement
-
-            # Update balance
-            # Available = Opening + Accrued + CarryForward - Taken - Pending
-            # We strictly control 'accrued' here.
-            balance.accrued = total_accrued
+                balance.accrued = total_accrued
+            
+            else:
+                 # For Manual/Annual/Fixed types (Maternity, Paternity, etc.)
+                 if lt.name not in [LeaveTypeEnum.compensatory_off, LeaveTypeEnum.loss_of_pay]:
+                      balance.accrued = Decimal(str(lt.annual_entitlement))
+            
             balance.available = balance.opening_balance + balance.accrued + balance.carry_forward - balance.taken - balance.pending_approval
             leave_repository.update_balance(db, balance)
 
@@ -129,7 +136,7 @@ class LeaveService:
         
         return Decimal(str(working_days))
 
-    def apply_leave(self, db: Session, application_data: LeaveApplicationCreate, employee_id: int):
+    def apply_leave(self, db: Session, application_data: LeaveApplicationCreate, employee_id: int, attachment: Optional[UploadFile] = None):
         # 1. Check Balance
         # Ensure accruals are up to date
         current_year = application_data.from_date.year
@@ -185,7 +192,7 @@ class LeaveService:
                  raise HTTPException(status_code=400, detail=f"This leave type is only applicable for {leave_type.gender_eligibility} employees.")
 
         # Document Requirement Check
-        if leave_type.requires_document and not application_data.attachment:
+        if leave_type.requires_document and not attachment:
              raise HTTPException(status_code=400, detail=f"Supporting document is required for {leave_type.name.replace('_', ' ').title()}.")
 
         # Consecutive Days
@@ -216,11 +223,18 @@ class LeaveService:
 
         # 2. Create Application
         app = LeaveApplication(
-            **application_data.model_dump(exclude={'number_of_days'}),
+            **application_data.model_dump(exclude={'number_of_days', 'attachment'}),
             number_of_days=float(days_requested),
             employee_id=employee_id,
             status=LeaveApplicationStatus.pending
         )
+        
+        # Handle attachment
+        if attachment:
+            sub_folder = f"leaves/{employee_id}/{leave_type.name.value}"
+            relative_path = upload_file(attachment, sub_folder)
+            app.attachment = relative_path
+            
         leave_repository.create_application(db, app)
 
         # 3. Update Pending Balance
@@ -298,7 +312,7 @@ class LeaveService:
         db.commit()
         return None
 
-    def update_leave(self, db: Session, application_id: int, application_data: LeaveApplicationCreate, employee_id: int):
+    def update_leave(self, db: Session, application_id: int, application_data: LeaveApplicationCreate, employee_id: int, attachment: Optional[UploadFile] = None, clear_attachment: bool = False):
         app = leave_repository.get_application(db, application_id)
         if not app:
              raise HTTPException(status_code=404, detail="Application not found")
@@ -308,6 +322,11 @@ class LeaveService:
 
         if app.status != LeaveApplicationStatus.pending:
              raise HTTPException(status_code=400, detail="Only pending applications can be edited")
+
+        # Get leave type
+        leave_type = leave_repository.get_leave_type(db, application_data.leave_type_id)
+        if not leave_type:
+             raise HTTPException(status_code=404, detail="Leave type not found")
 
         # Calculate NEW precise days
         new_days = self.calculate_working_days(
@@ -331,17 +350,40 @@ class LeaveService:
         current_year = application_data.from_date.year
         new_balance = leave_repository.get_balance(db, employee_id, application_data.leave_type_id, current_year)
         if not new_balance:
-             raise HTTPException(status_code=400, detail="Leave balance not initialized for new type.")
+             # Initialize if missing for the new year/type
+             new_balance = LeaveBalance(
+                employee_id=employee_id,
+                leave_type_id=application_data.leave_type_id,
+                leave_year=current_year,
+                available=0
+             )
+             db.add(new_balance)
+             db.flush()
         
-        if new_balance.available < new_days:
+        if not leave_type.negative_balance_allowed and new_balance.available < new_days:
              # Revert back to old before failing
              old_balance.pending_approval += Decimal(str(app.number_of_days))
              old_balance.available -= Decimal(str(app.number_of_days))
              leave_repository.update_balance(db, old_balance)
              raise HTTPException(status_code=400, detail="Insufficient balance for updated request")
 
+        # Handle attachment update
+        if attachment:
+            # Delete old file if exists
+            if app.attachment:
+                delete_file(app.attachment)
+            
+            sub_folder = f"leaves/{employee_id}/{leave_type.name.value}"
+            relative_path = upload_file(attachment, sub_folder)
+            app.attachment = relative_path
+        elif clear_attachment:
+            # Explicitly remove attachment
+            if app.attachment:
+                delete_file(app.attachment)
+            app.attachment = None
+
         # 3. Update fields
-        data_to_update = application_data.model_dump(exclude={'number_of_days'})
+        data_to_update = application_data.model_dump(exclude={'number_of_days', 'attachment'})
         for field, value in data_to_update.items():
             setattr(app, field, value)
         app.number_of_days = float(new_days)

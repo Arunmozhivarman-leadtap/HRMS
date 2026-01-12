@@ -77,6 +77,7 @@ class LeaveApplicationResponse(LeaveApplicationCreate):
     updated_at: Optional[datetime] = None
     employee_name: Optional[str] = None # Helper for UI
     leave_type_name: Optional[str] = None # Helper for UI
+    approver_note: Optional[str] = None
 
     class Config:
         from_attributes = True
