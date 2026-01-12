@@ -22,6 +22,7 @@ class Employee(Base):
     
     role = Column(String, default="employee")  # admin, hr, manager, employee
     is_active = Column(Boolean, default=True)
+    gender = Column(String(10), nullable=True) # Male, Female, Other
     
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     manager_id = Column(Integer, ForeignKey("employees.id"), nullable=True)

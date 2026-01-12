@@ -48,6 +48,8 @@ class LeaveType(Base):
     requires_approval = Column(Boolean, default=True)
     min_days_in_advance = Column(Integer, nullable=True)
     max_consecutive_days = Column(Integer, nullable=True)
+    gender_eligibility = Column(String(20), default="All") # All, Male, Female
+    requires_document = Column(Boolean, default=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -42,6 +42,8 @@ export interface LeaveType {
     negative_balance_allowed: boolean;
     min_days_in_advance?: number;
     max_consecutive_days?: number;
+    gender_eligibility?: string;
+    requires_document?: boolean;
     created_at: string;
     updated_at?: string;
 }
@@ -104,4 +106,28 @@ export interface PublicHoliday {
     description?: string;
     recurring: boolean;
     created_at: string;
+}
+
+export enum LeaveCreditStatus {
+    pending = 'pending',
+    approved = 'approved',
+    rejected = 'rejected'
+}
+
+export interface LeaveCreditRequest {
+    id: number;
+    employee_id: number;
+    leave_type_id: number;
+    date_worked: string; // YYYY-MM-DD
+    reason: string;
+    status: LeaveCreditStatus;
+    approver_id?: number;
+    approved_date?: string;
+    created_at: string;
+}
+
+export interface LeaveCreditRequestCreate {
+    leave_type_id?: number;
+    date_worked: string;
+    reason: string;
 }

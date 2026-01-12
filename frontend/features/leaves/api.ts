@@ -1,10 +1,12 @@
 import { fetcher } from "@/lib/api";
-import { 
-    LeaveType, 
-    LeaveBalance, 
-    LeaveApplication, 
-    LeaveApplicationCreate, 
-    PublicHoliday 
+import {
+    LeaveType,
+    LeaveBalance,
+    LeaveApplication,
+    LeaveApplicationCreate,
+    PublicHoliday,
+    LeaveCreditRequest,
+    LeaveCreditRequestCreate
 } from "@/types/leave";
 
 export const getLeaveTypes = async (): Promise<LeaveType[]> => {
@@ -115,4 +117,28 @@ export const getLeaveStats = async (year?: number): Promise<{
         pending_applications: number;
         taken_by_type: Record<string, number>;
     }>(`/leaves/stats${query}`);
+};
+
+// Credit Requests
+export const requestLeaveCredit = async (data: LeaveCreditRequestCreate): Promise<LeaveCreditRequest> => {
+    return fetcher<LeaveCreditRequest>("/leaves/credit", {
+        method: "POST",
+        body: JSON.stringify(data),
+    });
+};
+
+export const getMyCreditRequests = async (): Promise<LeaveCreditRequest[]> => {
+    return fetcher<LeaveCreditRequest[]>("/leaves/credit/my");
+};
+
+export const getPendingCreditRequests = async (): Promise<LeaveCreditRequest[]> => {
+    return fetcher<LeaveCreditRequest[]>("/leaves/credit/pending");
+};
+
+export const approveLeaveCredit = async (id: number): Promise<LeaveCreditRequest> => {
+    return fetcher<LeaveCreditRequest>(`/leaves/credit/${id}/approve`, { method: "POST" });
+};
+
+export const rejectLeaveCredit = async (id: number): Promise<LeaveCreditRequest> => {
+    return fetcher<LeaveCreditRequest>(`/leaves/credit/${id}/reject`, { method: "POST" });
 };

@@ -4,18 +4,19 @@ import { useState, useMemo, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { 
-    Loader2, 
-    Plus, 
-    Calendar as CalendarIcon, 
-    Upload, 
-    Info, 
-    AlertCircle, 
-    X, 
+import {
+    Loader2,
+    Plus,
+    Calendar as CalendarIcon,
+    Upload,
+    Info,
+    AlertCircle,
+    X,
     FileIcon,
-    ArrowRight
+    ArrowRight,
+
 } from "lucide-react"
-import { format, parseISO, isSaturday, isSunday } from "date-fns"
+import { format, parseISO, isSaturday, isSunday, addDays } from "date-fns"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,7 +29,6 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-    FormDescription,
 } from "@/components/ui/form"
 import {
     Select,
@@ -47,10 +47,13 @@ import { LeaveType, LeaveApplication } from "@/types/leave"
 import { cn, fileToBase64 } from "@/lib/utils"
 import { useLeaveTypes, useApplyLeave, useUpdateLeave, useMyLeaveBalances, usePublicHolidays } from "../hooks/use-leaves"
 import { calculateWorkingDays } from "@/lib/leave-utils"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 
 const leaveFormSchema = z.object({
     leave_type_id: z.coerce.number().min(1, "Please select a leave type"),
-    from_date: z.date({ required_error: "Start date is required" }),
+    from_date: z.date({ required_error: "Start date is required" })
+        .min(new Date(new Date().setHours(0, 0, 0, 0)), "Start date cannot be in the past"),
     to_date: z.date().optional().nullable(),
     duration_type: z.enum(["Full Day", "Half Day", "Multiple Days"]),
     reason: z.string().min(5, "Reason must be at least 5 characters"),
@@ -86,7 +89,7 @@ export function ApplyLeaveDialog({ application, trigger }: ApplyLeaveDialogProps
     const [isOpen, setIsOpen] = useState(false)
     const [fileName, setFileName] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    
+
     const { data: leaveTypes } = useLeaveTypes()
     const { data: balances } = useMyLeaveBalances()
     const { data: holidays } = usePublicHolidays(new Date().getFullYear())
@@ -122,7 +125,7 @@ export function ApplyLeaveDialog({ application, trigger }: ApplyLeaveDialogProps
         if (!watchFromDate) return 0
         return calculateWorkingDays(
             watchFromDate,
-            watchDurationType === "Multiple Days" ? watchToDate : watchFromDate,
+            watchDurationType === "Multiple Days" ? (watchToDate ?? null) : watchFromDate,
             watchDurationType,
             holidays || []
         )
@@ -147,6 +150,14 @@ export function ApplyLeaveDialog({ application, trigger }: ApplyLeaveDialogProps
 
     function onSubmit(data: LeaveFormValues) {
         if (isBalanceInsufficient) return
+
+        if (selectedType?.requires_document && !data.attachment) {
+            form.setError("attachment", {
+                type: "manual",
+                message: `Supporting document is required for ${selectedType.name.replace(/_/g, ' ')}`
+            })
+            return
+        }
 
         const payload = {
             ...data,
@@ -173,280 +184,351 @@ export function ApplyLeaveDialog({ application, trigger }: ApplyLeaveDialogProps
         }
     }
 
+    const isDateDisabled = (date: Date) => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const isHoliday = holidays?.some(h => h.holiday_date === dateStr) || false;
+        const isWeekend = isSaturday(date) || isSunday(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return date < today || isWeekend || isHoliday;
+    }
+
     return (
         <>
             {trigger ? (
                 <div onClick={() => setIsOpen(true)}>{trigger}</div>
             ) : (
-                <Button 
+                <Button
                     onClick={() => setIsOpen(true)}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 text-sm h-10 px-6 flex items-center gap-2 shadow-sm transition-all rounded-md"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md transition-all rounded-lg font-medium px-6"
                 >
-                    <Plus className="h-4 w-4" /> Apply for Leave
+                    <Plus className="h-4 w-4 mr-2" /> Apply Leave
                 </Button>
             )}
-            
-            <SimpleDialog 
-                isOpen={isOpen} 
-                onClose={() => setIsOpen(false)} 
-                title={isEditing ? "Edit Leave Request" : "Request Leave"}
-                description={isEditing ? "Update your leave details below." : "Submit a new leave application for approval."}
-                className="max-w-xl"
+
+            <SimpleDialog
+                isOpen={isOpen}
+                onClose={() => setIsOpen(false)}
+                title={isEditing ? "Edit Leave Request" : "New Leave Request"}
+                description="Complete the form below to submit your leave application."
+                className="max-w-5xl sm:max-w-5xl p-5 overflow-hidden gap-0 w-full sm:w-[95vw]"
             >
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-2">
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Leave Type Selection */}
-                            <FormField
-                                control={form.control}
-                                name="leave_type_id"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
-                                            <FormControl>
-                                                <SelectTrigger className="h-10 border-zinc-200">
-                                                    <SelectValue placeholder="Select leave type" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {leaveTypes?.map((type: LeaveType) => (
-                                                    <SelectItem key={type.id} value={type.id.toString()}>
-                                                        {type.name.replace(/_/g, ' ')}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {selectedBalance && (
-                                            <div className="mt-1.5 flex items-center gap-1.5">
-                                                <span className="text-[10px] font-medium text-muted-foreground">Available:</span>
-                                                <span className="text-[10px] font-bold text-foreground">{selectedBalance.available} Days</span>
-                                            </div>
-                                        )}
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                <div className="flex flex-col h-full bg-zinc-50/30">
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 h-full">
+                                {/* Left Column: Primary Inputs */}
+                                <div className="lg:col-span-7 p-6 md:p-8 space-y-8 bg-white border-b lg:border-b-0 lg:border-r border-zinc-100">
+                                    {/* Leave Type & Duration */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        <FormField
+                                            control={form.control}
+                                            name="leave_type_id"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
+                                                        <FormControl>
+                                                            <SelectTrigger className="mt-1.5 h-11 bg-zinc-50 border-zinc-200 focus:ring-primary/20 transition-all font-medium">
+                                                                <SelectValue placeholder="Select type" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {leaveTypes?.map((type: LeaveType) => (
+                                                                <SelectItem key={type.id} value={type.id.toString()}>
+                                                                    {type.name.replace(/_/g, ' ')}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
 
-                            {/* Duration Type */}
-                            <FormField
-                                control={form.control}
-                                name="duration_type"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Duration</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger className="h-10 border-zinc-200">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="Full Day">Full Day</SelectItem>
-                                                <SelectItem value="Half Day">Half Day</SelectItem>
-                                                <SelectItem value="Multiple Days">Multiple Days</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                                        <FormField
+                                            control={form.control}
+                                            name="duration_type"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Duration</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger className="mt-1.5 h-11 bg-zinc-50 border-zinc-200 focus:ring-primary/20 transition-all font-medium">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="Full Day">Full Day (1 Day)</SelectItem>
+                                                            <SelectItem value="Half Day">Half Day (0.5 Day)</SelectItem>
+                                                            <SelectItem value="Multiple Days">Multiple Days</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
 
-                        {/* Date Range Selection */}
-                        <div className="bg-muted/30 p-4 rounded-lg border border-border/50">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField
-                                    control={form.control}
-                                    name="from_date"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                            <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-1">
-                                                {watchDurationType === "Multiple Days" ? "From Date" : "Date"}
-                                            </FormLabel>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <FormControl>
-                                                        <Button
-                                                            variant="outline"
-                                                            className={cn(
-                                                                "h-10 pl-3 text-left font-normal bg-background border-zinc-200",
-                                                                !field.value && "text-muted-foreground"
-                                                            )}
-                                                        >
-                                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                        </Button>
-                                                    </FormControl>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0 border-none shadow-xl" align="start">
-                                                    <Calendar
-                                                        mode="single"
-                                                        selected={field.value}
-                                                        onSelect={field.onChange}
-                                                        disabled={(date) => {
-                                                            const dateStr = format(date, 'yyyy-MM-dd');
-                                                            const isHoliday = holidays?.some(h => h.holiday_date === dateStr);
-                                                            const isWeekend = isSaturday(date) || isSunday(date);
-                                                            return date < new Date("1900-01-01") || isWeekend || isHoliday;
-                                                        }}
-                                                        initialFocus
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                    <Separator className="bg-zinc-100" />
 
-                                {watchDurationType === "Multiple Days" && (
+                                    {/* Date Selection */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4 text-primary" />
+                                            <h4 className="text-sm font-semibold text-foreground">Date Schedule</h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            <FormField
+                                                control={form.control}
+                                                name="from_date"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex flex-col">
+                                                        <FormLabel className="text-xs font-medium text-muted-foreground mb-1.5">
+                                                            {watchDurationType === "Multiple Days" ? "Start Date" : "Date"}
+                                                        </FormLabel>
+                                                        <Popover>
+                                                            <PopoverTrigger asChild>
+                                                                <FormControl>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className={cn(
+                                                                            "h-11 pl-4 w-full text-left font-normal bg-zinc-50 border-zinc-200 hover:bg-zinc-100 transition-colors",
+                                                                            !field.value && "text-muted-foreground"
+                                                                        )}
+                                                                    >
+                                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                    </Button>
+                                                                </FormControl>
+                                                            </PopoverTrigger>
+                                                            <PopoverContent className="w-auto p-0" align="start">
+                                                                <Calendar
+                                                                    mode="single"
+                                                                    selected={field.value}
+                                                                    onSelect={field.onChange}
+                                                                    disabled={isDateDisabled}
+                                                                    initialFocus
+                                                                />
+                                                            </PopoverContent>
+                                                        </Popover>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            {watchDurationType === "Multiple Days" && (
+                                                <FormField
+                                                    control={form.control}
+                                                    name="to_date"
+                                                    render={({ field }) => (
+                                                        <FormItem className="flex flex-col">
+                                                            <FormLabel className="text-xs font-medium text-muted-foreground mb-1.5">End Date</FormLabel>
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <FormControl>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            className={cn(
+                                                                                "h-11 pl-4 w-full text-left font-normal bg-zinc-50 border-zinc-200 hover:bg-zinc-100 transition-colors",
+                                                                                !field.value && "text-muted-foreground"
+                                                                            )}
+                                                                        >
+                                                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                        </Button>
+                                                                    </FormControl>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-auto p-0" align="start">
+                                                                    <Calendar
+                                                                        mode="single"
+                                                                        selected={field.value || undefined}
+                                                                        onSelect={field.onChange}
+                                                                        disabled={(date) => isDateDisabled(date) || (watchFromDate ? date < watchFromDate : false)}
+                                                                        initialFocus
+                                                                    />
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <Separator className="bg-zinc-100" />
+
+                                    {/* Reason */}
                                     <FormField
                                         control={form.control}
-                                        name="to_date"
+                                        name="reason"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-col">
-                                                <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-1">To Date</FormLabel>
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                            <Button
-                                                                variant="outline"
-                                                                className={cn(
-                                                                    "h-10 pl-3 text-left font-normal bg-background border-zinc-200",
-                                                                    !field.value && "text-muted-foreground"
-                                                                )}
-                                                            >
-                                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                            </Button>
-                                                        </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0 border-none shadow-xl" align="start">
-                                                        <Calendar
-                                                            mode="single"
-                                                            selected={field.value || undefined}
-                                                            onSelect={field.onChange}
-                                                            disabled={(date) => {
-                                                                const dateStr = format(date, 'yyyy-MM-dd');
-                                                                const isHoliday = holidays?.some(h => h.holiday_date === dateStr);
-                                                                const isWeekend = isSaturday(date) || isSunday(date);
-                                                                return date < (watchFromDate || new Date()) || isWeekend || isHoliday;
-                                                            }}
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reason for Leave</FormLabel>
+                                                <FormControl>
+                                                    <Textarea
+                                                        placeholder="Please detail the reason for your request..."
+                                                        className="min-h-[120px] bg-zinc-50 border-zinc-200 focus:ring-primary/20 resize-none"
+                                                        {...field}
+                                                    />
+                                                </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
-                                )}
-                            </div>
-
-                            {watchFromDate && (
-                                <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="size-2 rounded-full bg-primary animate-pulse" />
-                                        <span className="text-xs font-medium text-foreground">
-                                            Total requested: <span className="font-bold">{calculatedDays} {calculatedDays === 1 ? 'day' : 'days'}</span>
-                                        </span>
-                                    </div>
-                                    {isBalanceInsufficient && (
-                                        <div className="flex items-center gap-1 text-rose-600 text-[10px] font-bold uppercase tracking-tight bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
-                                            <AlertCircle className="size-3" />
-                                            Balance Exceeded
-                                        </div>
-                                    )}
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Reason & Contact */}
-                        <div className="grid grid-cols-1 gap-6">
-                            <FormField
-                                control={form.control}
-                                name="reason"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reason for Absence</FormLabel>
-                                        <FormControl>
-                                            <Textarea 
-                                                placeholder="Explain the reason for your leave request..." 
-                                                className="min-h-[80px] bg-background border-zinc-200 focus:ring-1 focus:ring-primary/20" 
-                                                {...field} 
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                {/* Right Column: Context & Summary */}
+                                <div className="lg:col-span-5 p-6 md:p-8 bg-zinc-50/50 flex flex-col gap-6">
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField
-                                    control={form.control}
-                                    name="contact_phone"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Emergency Phone</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Mobile number" className="h-10 bg-background border-zinc-200" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                
-                                <div className="space-y-2">
-                                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Upload Proof</span>
-                                    {fileName ? (
-                                        <div className="flex items-center justify-between bg-primary/5 border border-primary/10 rounded-md h-10 px-3">
-                                            <div className="flex items-center gap-2 overflow-hidden">
-                                                <FileIcon className="h-4 w-4 text-primary shrink-0" />
-                                                <span className="text-xs font-medium truncate max-w-[120px]">{fileName}</span>
+                                    {/* Balance Card */}
+                                    <div className="bg-white rounded-xl p-5 border border-zinc-200/60 shadow-sm space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Balance Status</span>
+                                            {selectedBalance && (
+                                                <Badge variant={selectedBalance.available > 0 ? "outline" : "destructive"}>
+                                                    {selectedBalance.available} Available
+                                                </Badge>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">Requested Duration</span>
+                                                <span className="font-semibold text-foreground">{calculatedDays} Days</span>
                                             </div>
-                                            <button type="button" onClick={removeFile} className="text-primary hover:text-rose-600">
-                                                <X className="h-4 w-4" />
-                                            </button>
+
+                                            {selectedBalance && (
+                                                <>
+                                                    <Separator className="bg-zinc-100" />
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-muted-foreground">Remaining after</span>
+                                                        <span className={cn(
+                                                            "font-bold",
+                                                            (selectedBalance.available - calculatedDays) < 0 ? "text-rose-600" : "text-emerald-600"
+                                                        )}>
+                                                            {selectedBalance.available - calculatedDays} Days
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {isBalanceInsufficient && (
+                                                <div className="flex items-start gap-2 text-xs text-rose-600 bg-rose-50 p-2.5 rounded-md mt-2">
+                                                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                                                    <p>You do not have enough leave balance for this request.</p>
+                                                </div>
+                                            )}
                                         </div>
-                                    ) : (
-                                        <div className="relative h-10">
-                                            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                                            <Button 
-                                                type="button" 
-                                                variant="outline" 
+                                    </div>
+
+                                    {/* Attachments */}
+                                    <div className="space-y-3">
+                                        <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                            Attachment {selectedType?.requires_document && <span className="text-destructive">*</span>}
+                                        </FormLabel>
+
+                                        {fileName ? (
+                                            <div className="flex items-center justify-between bg-white border border-zinc-200 rounded-lg p-3 shadow-sm">
+                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                        <FileIcon className="h-4 w-4 text-primary" />
+                                                    </div>
+                                                    <div className="flex flex-col overflow-hidden">
+                                                        <span className="text-sm font-medium truncate text-foreground">{fileName}</span>
+                                                        <span className="text-[10px] text-muted-foreground uppercase">Ready to upload</span>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={removeFile}
+                                                    className="h-8 w-8 text-muted-foreground hover:text-rose-600"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div
                                                 onClick={() => fileInputRef.current?.click()}
-                                                className="border-dashed border-zinc-300 h-10 w-full text-muted-foreground text-xs"
+                                                className="border-2 border-dashed border-zinc-200 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group"
                                             >
-                                                <Upload className="h-4 w-4 mr-2" /> Select File
-                                            </Button>
-                                        </div>
-                                    )}
+                                                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                                                <div className="size-10 rounded-full bg-zinc-100 group-hover:bg-white flex items-center justify-center transition-colors">
+                                                    <Upload className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-xs font-medium text-foreground">Click to upload document</p>
+                                                    <p className="text-[10px] text-muted-foreground mt-0.5">Supports PDF, JPG, PNG</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {form.formState.errors.attachment && (
+                                            <p className="text-sm font-medium text-destructive">
+                                                {form.formState.errors.attachment.message}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Contact Info */}
+                                    <div className="space-y-3">
+                                        <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact While Away</FormLabel>
+                                        <FormField
+                                            control={form.control}
+                                            name="contact_phone"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Emergency Phone Number"
+                                                            className="h-10 bg-white border-zinc-200"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Footer Actions */}
-                        <div className="flex justify-end gap-3 pt-6 border-t border-border/40">
-                            <Button 
-                                type="button" 
-                                variant="ghost" 
-                                onClick={() => setIsOpen(false)}
-                                className="h-10 px-6 text-sm font-medium text-muted-foreground hover:text-foreground"
-                            >
-                                Cancel
-                            </Button>
-                            <Button 
-                                type="submit" 
-                                disabled={isPending || isBalanceInsufficient || !watchFromDate}
-                                className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-8 text-sm font-bold shadow-md transition-all active:scale-95"
-                            >
-                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : isEditing ? "Update Request" : "Submit Request"}
-                            </Button>
-                        </div>
-                    </form>
-                </Form>
-            </SimpleDialog>
+                            {/* Footer Actions */}
+                            <div className="p-4 bg-white border-t border-zinc-200 flex items-center justify-between mt-auto">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => setIsOpen(false)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={isPending || isBalanceInsufficient || !watchFromDate}
+                                    className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold px-8 shadow-md"
+                                >
+                                    {isPending ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            {isEditing ? "Save Changes" : "Submit Request"}
+                                            <ArrowRight className="h-4 w-4 ml-2 opacity-50" />
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
+                </div>
+            </SimpleDialog >
         </>
     )
 }

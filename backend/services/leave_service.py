@@ -6,31 +6,37 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from backend.repositories.leave_repository import leave_repository
 from backend.models.leave import LeaveApplication, LeaveBalance, LeaveTypeEnum, LeaveApplicationStatus, LeaveType, PublicHoliday
+from backend.models.leave_credit import LeaveCreditRequest, LeaveCreditStatus
 from backend.models.employee import Employee
 from backend.schemas.leave import LeaveApplicationCreate
+from backend.schemas.leave_credit import LeaveCreditRequestCreate
 
 class LeaveService:
     def initialize_leave_types(self, db: Session):
         """Helper to ensure default types exist (called usually on startup or first run)"""
-        existing = leave_repository.get_leave_types(db)
-        if not existing:
-            # Create default types as per spec
-            types = [
-                LeaveType(name=LeaveTypeEnum.earned_leave, abbr="EL", annual_entitlement=15, accrual_method="monthly", carry_forward=True, max_carry_forward=30, encashment=True),
-                LeaveType(name=LeaveTypeEnum.casual_leave, abbr="CL", annual_entitlement=12, accrual_method="monthly", carry_forward=False),
-                LeaveType(name=LeaveTypeEnum.sick_leave, abbr="SL", annual_entitlement=12, accrual_method="monthly", carry_forward=True, max_carry_forward=24),
-                LeaveType(name=LeaveTypeEnum.compensatory_off, abbr="CO", annual_entitlement=0, accrual_method="manual", carry_forward=False, requires_approval=True),
-                LeaveType(name=LeaveTypeEnum.loss_of_pay, abbr="LOP", annual_entitlement=0, accrual_method="manual", carry_forward=False, negative_balance_allowed=True),
-                LeaveType(name=LeaveTypeEnum.maternity_leave, abbr="ML", annual_entitlement=180, accrual_method="manual", carry_forward=False, requires_approval=True),
-                LeaveType(name=LeaveTypeEnum.paternity_leave, abbr="PL", annual_entitlement=5, accrual_method="manual", carry_forward=False, requires_approval=True),
-                LeaveType(name=LeaveTypeEnum.bereavement_leave, abbr="BL", annual_entitlement=5, accrual_method="manual", carry_forward=False, requires_approval=True),
-                LeaveType(name=LeaveTypeEnum.marriage_leave, abbr="MRL", annual_entitlement=3, accrual_method="manual", carry_forward=False, requires_approval=True),
-                LeaveType(name=LeaveTypeEnum.adoption_leave, abbr="AL", annual_entitlement=84, accrual_method="manual", carry_forward=False, requires_approval=True),
-                LeaveType(name=LeaveTypeEnum.restricted_holiday, abbr="RH", annual_entitlement=2, accrual_method="annual", carry_forward=False, requires_approval=True),
-            ]
-            for t in types:
+        # Define default types as per spec
+        default_types = [
+            LeaveType(name=LeaveTypeEnum.earned_leave, abbr="EL", annual_entitlement=15, accrual_method="monthly", carry_forward=True, max_carry_forward=30, encashment=True),
+            LeaveType(name=LeaveTypeEnum.casual_leave, abbr="CL", annual_entitlement=12, accrual_method="monthly", carry_forward=False),
+            LeaveType(name=LeaveTypeEnum.sick_leave, abbr="SL", annual_entitlement=12, accrual_method="monthly", carry_forward=True, max_carry_forward=24),
+            LeaveType(name=LeaveTypeEnum.compensatory_off, abbr="CO", annual_entitlement=0, accrual_method="manual", carry_forward=False, requires_approval=True),
+            LeaveType(name=LeaveTypeEnum.loss_of_pay, abbr="LOP", annual_entitlement=0, accrual_method="manual", carry_forward=False, negative_balance_allowed=True),
+            # Special Leave Types
+            LeaveType(name=LeaveTypeEnum.maternity_leave, abbr="ML", annual_entitlement=180, accrual_method="manual", carry_forward=False, requires_approval=True, gender_eligibility="Female", requires_document=True),
+            LeaveType(name=LeaveTypeEnum.paternity_leave, abbr="PL", annual_entitlement=5, accrual_method="manual", carry_forward=False, requires_approval=True, gender_eligibility="Male", requires_document=True),
+            LeaveType(name=LeaveTypeEnum.bereavement_leave, abbr="BL", annual_entitlement=5, accrual_method="manual", carry_forward=False, requires_approval=True, requires_document=True),
+            LeaveType(name=LeaveTypeEnum.marriage_leave, abbr="MRL", annual_entitlement=3, accrual_method="manual", carry_forward=False, requires_approval=True, requires_document=True),
+            LeaveType(name=LeaveTypeEnum.adoption_leave, abbr="AL", annual_entitlement=84, accrual_method="manual", carry_forward=False, requires_approval=True, requires_document=True),
+            LeaveType(name=LeaveTypeEnum.restricted_holiday, abbr="RH", annual_entitlement=2, accrual_method="annual", carry_forward=False, requires_approval=True),
+        ]
+
+        existing_types = {lt.name for lt in leave_repository.get_leave_types(db)}
+        
+        for t in default_types:
+            if t.name not in existing_types:
                 db.add(t)
-            db.commit()
+        
+        db.commit()
 
     def calculate_pro_rata_accrual(self, db: Session, employee_id: int, year: int) -> None:
         """
@@ -144,12 +150,43 @@ class LeaveService:
         if not leave_type:
              raise HTTPException(status_code=404, detail="Leave type not found")
 
+        # 1.1 Overlap Check
+        # Check if there are any pending or approved leaves that overlap with the requested dates
+        # Overlap Logic: (StartA <= EndB) and (EndA >= StartB)
+        overlapping_applications = db.query(LeaveApplication).filter(
+            LeaveApplication.employee_id == employee_id,
+            LeaveApplication.status.in_([LeaveApplicationStatus.pending, LeaveApplicationStatus.approved]),
+            LeaveApplication.from_date <= application_data.to_date,
+            LeaveApplication.to_date >= application_data.from_date
+        ).first()
+
+        if overlapping_applications:
+             raise HTTPException(
+                 status_code=400, 
+                 detail=f"Leave application overlaps with an existing application ({overlapping_applications.from_date} to {overlapping_applications.to_date})"
+             )
+
         # Advanced Validation
         # Advance Notice
         if leave_type.min_days_in_advance:
             notice_days = (application_data.from_date - date.today()).days
             if notice_days < leave_type.min_days_in_advance:
                 raise HTTPException(status_code=400, detail=f"This leave type requires {leave_type.min_days_in_advance} days advance notice.")
+
+        employee = db.query(Employee).filter(Employee.id == employee_id).first()
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+
+        # Gender Eligibility Check
+        if leave_type.gender_eligibility != "All":
+             # Assuming 'Male', 'Female', 'Other' are standard values. 
+             # Case-insensitive check recommended or strict match if enums used.
+             if not employee.gender or employee.gender.lower() != leave_type.gender_eligibility.lower():
+                 raise HTTPException(status_code=400, detail=f"This leave type is only applicable for {leave_type.gender_eligibility} employees.")
+
+        # Document Requirement Check
+        if leave_type.requires_document and not application_data.attachment:
+             raise HTTPException(status_code=400, detail=f"Supporting document is required for {leave_type.name.replace('_', ' ').title()}.")
 
         # Consecutive Days
         if leave_type.max_consecutive_days and days_requested > leave_type.max_consecutive_days:
@@ -378,5 +415,102 @@ class LeaveService:
             "pending_applications": pending_apps,
             "taken_by_type": {name.value: float(total) for name, total in taken_by_type}
         }
+
+
+    # --- Comp Off Credit Workflow ---
+
+    def request_leave_credit(self, db: Session, data: LeaveCreditRequestCreate, employee_id: int):
+        # Default to CO leave type if not specified
+        if not data.leave_type_id:
+            co_type = db.query(LeaveType).filter(LeaveType.name == LeaveTypeEnum.compensatory_off).first()
+            if not co_type:
+                raise HTTPException(status_code=500, detail="Compensatory Off leave type not configured")
+            data.leave_type_id = co_type.id
+        
+        # Check duplicate
+        existing = db.query(LeaveCreditRequest).filter(
+            LeaveCreditRequest.employee_id == employee_id,
+            LeaveCreditRequest.date_worked == data.date_worked,
+            LeaveCreditRequest.status != LeaveCreditStatus.rejected
+        ).first()
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="Credit request for this date already exists")
+
+        credit_req = LeaveCreditRequest(
+            **data.model_dump(),
+            employee_id=employee_id,
+            status=LeaveCreditStatus.pending
+        )
+        db.add(credit_req)
+        db.commit()
+        db.refresh(credit_req)
+        return credit_req
+
+    def get_my_credit_requests(self, db: Session, employee_id: int):
+        return db.query(LeaveCreditRequest).filter(LeaveCreditRequest.employee_id == employee_id).order_by(LeaveCreditRequest.created_at.desc()).all()
+
+    def get_pending_credit_requests(self, db: Session, manager_id: int, role: str):
+        query = db.query(LeaveCreditRequest).filter(LeaveCreditRequest.status == LeaveCreditStatus.pending)
+        if role not in ['hr_admin', 'super_admin']:
+            # Filter by team
+            team_ids = leave_repository.get_team_employee_ids(db, manager_id)
+            query = query.filter(LeaveCreditRequest.employee_id.in_(team_ids))
+        return query.all()
+
+    def approve_leave_credit(self, db: Session, request_id: int, approver_id: int):
+        req = db.query(LeaveCreditRequest).filter(LeaveCreditRequest.id == request_id).first()
+        if not req:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        if req.status != LeaveCreditStatus.pending:
+            raise HTTPException(status_code=400, detail="Request is not pending")
+
+        req.status = LeaveCreditStatus.approved
+        req.approver_id = approver_id
+        req.approved_date = func.now()
+
+        # Update Balance: Credit +1
+        current_year = req.date_worked.year
+        balance = leave_repository.get_balance(db, req.employee_id, req.leave_type_id, current_year)
+        
+        if not balance:
+            # Create if missing
+             balance = LeaveBalance(
+                employee_id=req.employee_id,
+                leave_type_id=req.leave_type_id,
+                leave_year=current_year,
+                available=0
+             )
+             db.add(balance)
+             db.flush()
+
+        # Add to Opening Balance or Create new 'credit_earned' field?
+        # Typically CO acts like accrual or direct addition. Let's add to 'accrued' or 'opening'.
+        # Safest is to add to 'accrued' since it is earned during the year.
+        # However, earlier logic overwrites 'accrued' based on pro-rata.
+        # CO is "manual" accrual method, so calculate_pro_rata_accrual ignores it.
+        
+        balance.accrued += Decimal(1)
+        balance.available += Decimal(1)
+        
+        leave_repository.update_balance(db, balance)
+        db.commit()
+        db.refresh(req)
+        return req
+
+    def reject_leave_credit(self, db: Session, request_id: int, approver_id: int):
+        req = db.query(LeaveCreditRequest).filter(LeaveCreditRequest.id == request_id).first()
+        if not req:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
+        if req.status != LeaveCreditStatus.pending:
+            raise HTTPException(status_code=400, detail="Request is not pending")
+
+        req.status = LeaveCreditStatus.rejected
+        req.approver_id = approver_id
+        db.commit()
+        db.refresh(req)
+        return req
 
 leave_service = LeaveService()

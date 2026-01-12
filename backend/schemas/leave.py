@@ -18,7 +18,10 @@ class LeaveTypeBase(BaseModel):
     negative_balance_allowed: bool = False
     requires_approval: bool = True
     min_days_in_advance: Optional[int] = None
+    min_days_in_advance: Optional[int] = None
     max_consecutive_days: Optional[int] = None
+    gender_eligibility: str = "All"
+    requires_document: bool = False
 
 class LeaveTypeResponse(LeaveTypeBase):
     id: int

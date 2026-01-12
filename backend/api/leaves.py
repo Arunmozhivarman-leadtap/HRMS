@@ -10,6 +10,7 @@ from backend.schemas.leave import (
     LeaveBalanceResponse, LeaveTypeResponse, PublicHolidayResponse,
     LeaveTypeBase
 )
+from backend.schemas.leave_credit import LeaveCreditRequestCreate, LeaveCreditRequestResponse
 from backend.core.dependencies import get_current_user
 
 router = APIRouter()
@@ -211,3 +212,59 @@ def get_holidays(
     db: Session = Depends(get_db)
 ):
     return leave_repository.get_holidays(db, year)
+
+# --- Credit Request Endpoints ---
+
+@router.post("/credit", response_model=LeaveCreditRequestResponse)
+def request_leave_credit(
+    data: LeaveCreditRequestCreate,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not current_user.employee_id:
+        raise HTTPException(status_code=400, detail="User is not linked to an employee record")
+    return leave_service.request_leave_credit(db, data, current_user.employee_id)
+
+@router.get("/credit/my", response_model=List[LeaveCreditRequestResponse])
+def get_my_credit_requests(
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not current_user.employee_id:
+        raise HTTPException(status_code=400, detail="User is not linked to an employee record")
+    return leave_service.get_my_credit_requests(db, current_user.employee_id)
+
+@router.get("/credit/pending", response_model=List[LeaveCreditRequestResponse])
+def get_pending_credit_requests(
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ['manager', 'hr_admin', 'super_admin']:
+         raise HTTPException(status_code=403, detail="Not authorized")
+    if not current_user.employee_id:
+         raise HTTPException(status_code=400, detail="User is not linked to an employee record")
+    return leave_service.get_pending_credit_requests(db, current_user.employee_id, current_user.role)
+
+@router.post("/credit/{req_id}/approve", response_model=LeaveCreditRequestResponse)
+def approve_leave_credit(
+    req_id: int,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ['manager', 'hr_admin', 'super_admin']:
+         raise HTTPException(status_code=403, detail="Not authorized")
+    if not current_user.employee_id:
+         raise HTTPException(status_code=400, detail="User is not linked to an employee record")
+    return leave_service.approve_leave_credit(db, req_id, current_user.employee_id)
+
+@router.post("/credit/{req_id}/reject", response_model=LeaveCreditRequestResponse)
+def reject_leave_credit(
+    req_id: int,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ['manager', 'hr_admin', 'super_admin']:
+         raise HTTPException(status_code=403, detail="Not authorized")
+    if not current_user.employee_id:
+         raise HTTPException(status_code=400, detail="User is not linked to an employee record")
+    return leave_service.reject_leave_credit(db, req_id, current_user.employee_id)

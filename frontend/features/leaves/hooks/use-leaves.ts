@@ -1,15 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-    getLeaveTypes, 
-    getMyLeaveBalances, 
-    applyLeave, 
+import {
+    getLeaveTypes,
+    getMyLeaveBalances,
+    applyLeave,
     updateLeave,
     cancelLeave,
-    getMyLeaveApplications, 
+    getMyLeaveApplications,
     getTeamLeaveApplications,
     getAllLeaveApplications,
-    getPendingApprovals, 
-    approveLeave, 
+    getPendingApprovals,
+    approveLeave,
     rejectLeave,
     getPublicHolidays,
     getTeamLeaveBalances,
@@ -17,9 +17,14 @@ import {
     createLeaveType,
     updateLeaveType,
     deleteLeaveType,
-    getLeaveStats
+    getLeaveStats,
+    requestLeaveCredit,
+    getMyCreditRequests,
+    getPendingCreditRequests,
+    approveLeaveCredit,
+    rejectLeaveCredit
 } from "../api";
-import { LeaveApplicationCreate, LeaveType } from "@/types/leave";
+import { LeaveApplicationCreate, LeaveType, LeaveCreditRequestCreate } from "@/types/leave";
 import { useToast } from "@/hooks/use-toast";
 
 export const useLeaveTypes = () => {
@@ -254,6 +259,92 @@ export const useRejectLeave = () => {
             toast({
                 title: "Error",
                 description: error.message || "Failed to reject leave.",
+                variant: "destructive",
+            });
+        },
+    });
+};
+
+// Credit Hooks
+
+export const useRequestLeaveCredit = () => {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    return useMutation({
+        mutationFn: (data: LeaveCreditRequestCreate) => requestLeaveCredit(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["my-credit-requests"] });
+            toast({
+                title: "Credit Request Submitted",
+                description: "Your request for leave credit has been submitted.",
+            });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to submit request.",
+                variant: "destructive",
+            });
+        },
+    });
+};
+
+export const useMyCreditRequests = () => {
+    return useQuery({
+        queryKey: ["my-credit-requests"],
+        queryFn: getMyCreditRequests,
+    });
+};
+
+export const usePendingCreditRequests = () => {
+    return useQuery({
+        queryKey: ["pending-credit-requests"],
+        queryFn: getPendingCreditRequests,
+    });
+};
+
+export const useApproveLeaveCredit = () => {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    return useMutation({
+        mutationFn: (id: number) => approveLeaveCredit(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["pending-credit-requests"] });
+            queryClient.invalidateQueries({ queryKey: ["team-leave-balances"] });
+            toast({
+                title: "Approved",
+                description: "Leave credit approved successfully.",
+            });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to approve credit.",
+                variant: "destructive",
+            });
+        },
+    });
+};
+
+export const useRejectLeaveCredit = () => {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    return useMutation({
+        mutationFn: (id: number) => rejectLeaveCredit(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["pending-credit-requests"] });
+            toast({
+                title: "Rejected",
+                description: "Leave credit rejected.",
+            });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to reject credit.",
                 variant: "destructive",
             });
         },
