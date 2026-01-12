@@ -9,17 +9,24 @@ export class ApiError extends Error {
 
 interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
+  skipAuth?: boolean;
 }
 
 export async function fetcher<T>(url: string, options: FetchOptions = {}): Promise<T> {
   const { ...fetchOptions } = options;
 
+  // Don't set Content-Type if body is FormData (browser will set it with boundary)
+  const headers: Record<string, string> = {
+    ...fetchOptions.headers,
+  };
+
+  if (!(fetchOptions.body instanceof FormData)) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
+
   const response = await fetch(`${API_URL}${url}`, {
     ...fetchOptions,
-    headers: {
-      "Content-Type": "application/json",
-      ...fetchOptions.headers,
-    },
+    headers,
     credentials: "include", // Essential for sending/receiving cookies
   });
 
@@ -38,6 +45,12 @@ async function handleResponse<T>(response: Response): Promise<T> {
     const errorData = await response.json().catch(() => ({}));
     throw new ApiError(response.status, errorData.detail || "An unexpected error occurred");
   }
+  
+  // Handle 204 No Content (common for DELETE)
+  if (response.status === 204) {
+    return null as T;
+  }
+
   return response.json();
 }
 

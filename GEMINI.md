@@ -234,8 +234,10 @@ Any response that weakens validation, bypasses settings, or hides misconfigurati
 ## 18. Production-Ready Implementation Rule
 
 - Do not use mock, stub, placeholder, or simulated implementations
+- do not use non-existent and unused codes in any files.
 - Always generate production-ready logic by default
 - If production setup requires manual configuration or credentials, assume they will be provided after initial setup
 - Proceed with full implementation and complete integration once setup is confirmed
+- Each time created a module run the backend and frontend to check for errors and fix it
 
 Failure to follow these rules is incorrect output.

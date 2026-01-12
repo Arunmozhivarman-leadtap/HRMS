@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from backend.repositories.user_repository import user_repository
-from backend.schemas.employee import EmployeeCreate
+from backend.schemas.employee import EmployeeCreate, BankingInfoUpdate
 from backend.core.security import get_password_hash
+from backend.models.employee import Employee
 
 class UserService:
     def create_user(self, db: Session, user_in: EmployeeCreate):
@@ -23,5 +24,21 @@ class UserService:
 
     def get_users(self, db: Session, skip: int = 0, limit: int = 100):
         return user_repository.get_users(db, skip=skip, limit=limit)
+
+    def update_banking_info(self, db: Session, employee_id: int, banking_in: BankingInfoUpdate):
+        employee = db.query(Employee).filter(Employee.id == employee_id).first()
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        
+        if banking_in.account_number != banking_in.confirm_account_number:
+            raise HTTPException(status_code=400, detail="Account numbers do not match")
+
+        banking_data = banking_in.model_dump(exclude={"confirm_account_number"})
+        for field, value in banking_data.items():
+            setattr(employee, field, value)
+        
+        db.commit()
+        db.refresh(employee)
+        return employee
 
 user_service = UserService()

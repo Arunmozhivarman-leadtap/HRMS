@@ -157,3 +157,33 @@
     @apply text-[length:var(--font-size-h3)] font-medium leading-normal;
   }
 }
+
+/* React Day Picker v9 Styles */
+.rdp-month_grid {
+  width: 100%;
+}
+
+.rdp-weekdays {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.rdp-weekday {
+  width: 32px;
+  text-align: center;
+}
+
+.rdp-week {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.rdp-day {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

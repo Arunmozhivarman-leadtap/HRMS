@@ -43,7 +43,7 @@ export default function LandingPage() {
           
         </div>
         <p className=" text-lg text-muted-foreground  leading-relaxed">
-            Manage your employee lifecycle from onboarding to exit with LeadTap's unified India-first HRMS.
+            Manage your employee lifecycle from onboarding to exit with LeadTap&apos;s unified India-first HRMS.
           </p>
         <div className="relative z-10 flex gap-12 text-sm font-medium text-muted-foreground">
           

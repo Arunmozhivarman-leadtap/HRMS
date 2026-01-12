@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
 
+    # Storage
+    UPLOAD_ROOT: str
+
     @property
     def DATABASE_URL(self) -> str:
         return (

@@ -21,7 +21,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Employees", href: "/dashboard/employees", icon: Users },
   { name: "Documents", href: "/dashboard/documents", icon: FileText },
-  { name: "Leave", href: "/dashboard/leave", icon: CalendarDays },
+  { name: "Leave", href: "/dashboard/leaves", icon: CalendarDays },
   { name: "Reviews", href: "/dashboard/reviews", icon: PieChart },
   { name: "Celebrations", href: "/dashboard/celebrations", icon: Gift },
   { name: "Recruitment", href: "/dashboard/recruitment", icon: Briefcase },

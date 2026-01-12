@@ -1,11 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.core.config import settings
-from backend.api import auth, users
+from backend.api import auth, users, leaves, documents, onboarding
 from backend.core.database import engine, Base
-from backend.models.employee import Employee
-from backend.models.department import Department
-from backend.models.role import Role
+import backend.models
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -28,6 +26,9 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(leaves.router, prefix="/api/leaves", tags=["leaves"])
+app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
+app.include_router(onboarding.router, prefix="/api/onboarding", tags=["onboarding"])
 
 @app.get("/")
 async def root():

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status, Body, Response
 from sqlalchemy.orm import Session
 from backend.core.database import get_db
+from backend.core.dependencies import get_current_user
 from backend.schemas.auth import LoginRequest, Token, SSOLoginRequest
 from backend.services.auth_service import auth_service
 from backend.core.config import settings
@@ -14,7 +15,7 @@ def set_auth_cookies(response: Response, token_data: Token):
         httponly=True,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=True, # Set to True in production
+        secure=False, # Changed to False for HTTP testing
     )
     response.set_cookie(
         key="refresh_token",
@@ -22,8 +23,18 @@ def set_auth_cookies(response: Response, token_data: Token):
         httponly=True,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         samesite="lax",
-        secure=True,
+        secure=False, # Changed to False for HTTP testing
     )
+
+@router.get("/me")
+def get_current_user_info(current_user = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "username": current_user.username,
+        "role": current_user.role,
+        "employee_id": current_user.employee_id
+    }
 
 @router.post("/login")
 def login(response: Response, login_data: LoginRequest, db: Session = Depends(get_db)):

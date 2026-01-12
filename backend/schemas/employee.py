@@ -17,9 +17,26 @@ class EmployeeBase(BaseModel):
     is_active: bool = True
     department_id: Optional[int] = None
     manager_id: Optional[int] = None
+    
+    # Banking Information
+    bank_account_holder_name: Optional[str] = None
+    bank_name: Optional[str] = None
+    branch_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    account_type: Optional[str] = None
 
 class EmployeeCreate(EmployeeBase):
     password: str
+
+class BankingInfoUpdate(BaseModel):
+    bank_account_holder_name: str
+    bank_name: str
+    branch_name: str
+    account_number: str
+    confirm_account_number: str
+    ifsc_code: str
+    account_type: str
 
 class EmployeeUpdate(BaseModel):
     email: Optional[EmailStr] = None
