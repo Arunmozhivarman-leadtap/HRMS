@@ -23,7 +23,6 @@ class Candidate(Base):
     designation_id = Column(Integer, ForeignKey("designations.id"))
     department_id = Column(Integer, ForeignKey("departments.id"))
     reporting_manager_id = Column(Integer, ForeignKey("employees.id"))
-    location_id = Column(Integer, ForeignKey("locations.id"))
     employment_type = Column(String(50), nullable=False) # Enum in schema, but string for flexibility here or matching employment_type enum
     expected_joining_date = Column(Date, nullable=False)
     alternate_email = Column(String(255))

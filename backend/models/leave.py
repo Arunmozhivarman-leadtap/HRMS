@@ -126,11 +126,9 @@ class PublicHoliday(Base):
     name = Column(String(255), nullable=False)
     holiday_date = Column(Date, nullable=False, index=True)
     holiday_type = Column(Enum(HolidayType), nullable=False)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
     is_restricted = Column(Boolean, default=False)
     description = Column(Text, nullable=True)
     recurring = Column(Boolean, default=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    location = relationship("Location", back_populates="holidays")

@@ -14,9 +14,21 @@ def migrate():
         print("Checking/Adding 'gender' to employees...")
         try:
             conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS gender VARCHAR(10)"))
-            print(" - 'gender' column checked/added.")
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS blood_group VARCHAR(5)"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS marital_status VARCHAR(20)"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS personal_email VARCHAR(255)"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS emergency_contact_name VARCHAR(255)"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS emergency_contact_relation VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS emergency_contact_phone VARCHAR(20)"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS pan_number VARCHAR(10)"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(12)"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS uan_number VARCHAR(12)"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS esic_number VARCHAR(17)"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITH TIME ZONE"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS profile_photo VARCHAR(255)"))
+            print(" - New employee columns checked/added.")
         except Exception as e:
-            print(f" - Error adding gender: {e}")
+            print(f" - Error adding employee columns: {e}")
 
         print("Checking/Adding columns to leave_types...")
         try:
@@ -40,7 +52,7 @@ def migrate():
 
         conn.commit()
     
-    print("Running Base.metadata.create_all to create new tables if missing...")
+    print("Running Base.metadata.create_all to create new tables if missing (Settings, etc.)...")
     Base.metadata.create_all(bind=engine)
     print("Migration complete.")
 

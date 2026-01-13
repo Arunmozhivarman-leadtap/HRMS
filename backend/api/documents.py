@@ -48,9 +48,21 @@ async def upload_documents(
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
     # Role Scoping
+    # Role Scoping
     if current_user.role == UserRole.employee:
         if current_user.employee_id != employee_id:
             raise HTTPException(status_code=403, detail="Not authorized to upload for another employee")
+    
+    elif current_user.role == UserRole.manager:
+        # Manager: Can upload for self OR direct reports
+        if current_user.employee_id != employee_id:
+            # Check if target is a direct report
+            is_report = db.query(Employee).filter(
+                Employee.id == employee_id,
+                Employee.manager_id == current_user.employee_id
+            ).first()
+            if not is_report:
+                raise HTTPException(status_code=403, detail="Not authorized to upload for this employee")
     
     responses = []
     for file in files:
@@ -169,8 +181,19 @@ async def download_document(
         raise HTTPException(status_code=404, detail="Document not found")
     
     # Role Scoping
-    if current_user.role in [UserRole.employee, UserRole.manager] and current_user.employee_id != db_doc.employee_id:
-        raise HTTPException(status_code=403, detail="Not authorized to download this document")
+    if current_user.role not in [UserRole.hr_admin, UserRole.super_admin]:
+        # Check ownership
+        is_owner = current_user.employee_id == db_doc.employee_id
+        
+        # Check Manager (Team Access)
+        is_manager_of_owner = False
+        if current_user.role == UserRole.manager:
+             owner = db.query(Employee).filter(Employee.id == db_doc.employee_id).first()
+             if owner and owner.manager_id == current_user.employee_id:
+                 is_manager_of_owner = True
+        
+        if not is_owner and not is_manager_of_owner:
+            raise HTTPException(status_code=403, detail="Not authorized to download this document")
     
     try:
         file_stream = get_file_stream(db_doc.file_path)
@@ -182,6 +205,16 @@ async def download_document(
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found on storage")
+
+# ... verify_document ...
+# ... get_expiries ...
+# ... delete_document ...
+# (skipping intermediate functions as they are not being edited in this chunk, 
+# but tool requires contiguous block. I will use the tool targeting separate blocks or one large block if needed.
+# Since I need to edit TWO separate functions (download and reports) which are far apart, 
+# I should probably use `multi_replace_file_content` or two `replace` calls.
+# I will use multi_replace for safety and cleanliness.)
+
 
 @router.patch("/{id}/verify", response_model=DocumentResponse)
 async def verify_document(
@@ -197,6 +230,19 @@ async def verify_document(
     db_doc = document_repository.get(db, id)
     if not db_doc:
         raise HTTPException(status_code=404, detail="Document not found")
+        
+    # Validation: Prevent self-verification and enforce HR verification rules
+    doc_owner = db_doc.employee
+    doc_owner_user = doc_owner.user if doc_owner else None
+    
+    if doc_owner_user:
+        # Prevent self-verification
+        if doc_owner_user.id == current_user.id:
+            raise HTTPException(status_code=403, detail="You cannot verify your own documents")
+            
+        # HR Documents must be verified by Super Admin
+        if doc_owner_user.role == UserRole.hr_admin and current_user.role != UserRole.super_admin:
+            raise HTTPException(status_code=403, detail="HR documents must be verified by a Super Admin")
     
     # Update status
     db_doc.verification_status = obj_in.status
@@ -308,8 +354,11 @@ async def get_document_reports(
     expiry_risks = query.filter(EmployeeDocument.expiry_date <= risk_date).count()
     
     return {
+        "total_employees": total_docs, # Mapping total_documents to total_employees for frontend/legacy compat
         "total_documents": total_docs,
         "verified_percentage": (verified_docs / total_docs * 100) if total_docs > 0 else 0,
+        "pending_count": pending_docs, # Flat key for frontend
+        "expiry_risks": expiry_risks, # Flat key for frontend
         "status_distribution": {
             "verified": verified_docs,
             "pending": pending_docs,
