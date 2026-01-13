@@ -4,14 +4,56 @@ import { useQuery } from "@tanstack/react-query"
 import { fetcher } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ShieldCheck, ClipboardCheck, AlertCircle } from "lucide-react"
+import { ShieldCheck, ClipboardCheck, AlertCircle, Search, Filter } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Document, DocumentVerificationStatus } from "@/types/document"
+import { VerificationDialog } from "@/components/documents/verification-dialog"
+import { useState } from "react"
+import { cn } from "@/lib/utils"
 
 export default function AdminDocumentsPage() {
+    const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
+    const [dialogOpen, setDialogOpen] = useState(false)
+    const [searchTerm, setSearchTerm] = useState("")
+
     const { data: stats } = useQuery({
         queryKey: ["admin-document-stats"],
-        queryFn: () => fetcher("/documents/reports")
+        queryFn: () => fetcher<any>("/documents/reports")
     })
+
+    const { data: pendingDocuments } = useQuery<Document[]>({
+        queryKey: ["documents", "pending"],
+        queryFn: () => fetcher("/documents/list?verification_status=pending")
+    })
+
+    const { data: allDocuments } = useQuery<Document[]>({
+        queryKey: ["documents", "all"],
+        queryFn: () => fetcher("/documents/list")
+    })
+
+    const handleVerifyClick = (doc: Document) => {
+        setSelectedDoc(doc)
+        setDialogOpen(true)
+    }
+
+    const filteredAllDocs = allDocuments?.filter(doc =>
+        doc.employee?.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.employee?.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.document_type.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const getStatusColor = (status: DocumentVerificationStatus) => {
+        switch (status) {
+            case DocumentVerificationStatus.verified: return "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+            case DocumentVerificationStatus.rejected: return "bg-rose-100 text-rose-800 hover:bg-rose-100"
+            case DocumentVerificationStatus.reupload_required: return "bg-amber-100 text-amber-800 hover:bg-amber-100"
+            case DocumentVerificationStatus.expired: return "bg-zinc-100 text-zinc-800 hover:bg-zinc-100"
+            default: return "bg-blue-100 text-blue-800 hover:bg-blue-100"
+        }
+    }
 
     return (
         <div className="space-y-8">
@@ -71,29 +113,129 @@ export default function AdminDocumentsPage() {
             <Tabs defaultValue="queue" className="w-full">
                 <TabsList className="mb-4">
                     <TabsTrigger value="queue">Verification Queue</TabsTrigger>
-                    <TabsTrigger value="all">All Employee Records</TabsTrigger>
+                    <TabsTrigger value="all">All Documents</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="queue" className="mt-0">
-                    <Card className="bg-background border shadow-sm">
-                        <CardHeader className="border-b border-border/40">
-                            <CardTitle className="text-lg font-serif">Pending Verification</CardTitle>
+                    <Card className="bg-background border shadow-sm flex flex-col min-h-[400px]">
+                        <CardHeader className="border-b border-border/40 pb-4">
+                            <CardTitle className="text-xl font-serif font-medium text-foreground">Verification Queue</CardTitle>
                             <CardDescription>Review and validate recently uploaded documents.</CardDescription>
                         </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="text-center py-20 bg-muted/5">
-                                <p className="text-sm text-muted-foreground italic tracking-tight font-medium">Pending queue table will appear here.</p>
+                        <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+                            <div className="overflow-auto max-h-[500px] flex-1">
+                                {pendingDocuments && pendingDocuments.length > 0 ? (
+                                    <table className="w-full text-sm text-left border-collapse">
+                                        <thead className="bg-muted/90 backdrop-blur-sm text-muted-foreground [&_th]:font-medium [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider sticky top-0 z-10 shadow-sm">
+                                            <tr className="border-b border-border/40">
+                                                <th className="h-10 px-6 align-middle">Employee</th>
+                                                <th className="h-10 px-6 align-middle">Document Type</th>
+                                                <th className="h-10 px-6 align-middle">Uploaded</th>
+                                                <th className="h-10 px-6 align-middle text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border/40">
+                                            {pendingDocuments.map((doc) => (
+                                                <tr key={doc.id} className="transition-colors hover:bg-muted/30">
+                                                    <td className="p-6 align-middle font-medium">
+                                                        {doc.employee?.first_name} {doc.employee?.last_name}
+                                                    </td>
+                                                    <td className="p-6 align-middle capitalize">
+                                                        {doc.document_type.replace(/_/g, " ")}
+                                                    </td>
+                                                    <td className="p-6 align-middle">
+                                                        {new Date(doc.created_at).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="p-6 align-middle text-right">
+                                                        <Button size="sm" onClick={() => handleVerifyClick(doc)}>Review</Button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center p-10 text-muted-foreground">
+                                        <p>No pending documents to review.</p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
 
                 <TabsContent value="all" className="mt-0">
-                    <div className="text-center py-20 bg-muted/5 rounded-xl border border-dashed">
-                        <p className="text-sm text-muted-foreground italic tracking-tight font-medium">Full organization document repository coming soon.</p>
-                    </div>
+                    <Card className="bg-background border shadow-sm flex flex-col min-h-[400px]">
+                        <CardHeader className="border-b border-border/40 pb-4 flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="text-xl font-serif font-medium text-foreground">Document Registry</CardTitle>
+                                <CardDescription>Complete history of all employee documents.</CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Search employees..."
+                                        className="pl-9 w-[250px]"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+                            <div className="overflow-auto max-h-[600px] flex-1">
+                                <table className="w-full text-sm text-left border-collapse">
+                                    <thead className="bg-muted/90 backdrop-blur-sm text-muted-foreground [&_th]:font-medium [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider sticky top-0 z-10 shadow-sm">
+                                        <tr className="border-b border-border/40">
+                                            <th className="h-10 px-6 align-middle">Employee</th>
+                                            <th className="h-10 px-6 align-middle">Type</th>
+                                            <th className="h-10 px-6 align-middle">Status</th>
+                                            <th className="h-10 px-6 align-middle">Uploaded</th>
+                                            <th className="h-10 px-6 align-middle text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border/40">
+                                        {filteredAllDocs?.map((doc) => (
+                                            <tr key={doc.id} className="transition-colors hover:bg-muted/30">
+                                                <td className="p-6 align-middle font-medium">
+                                                    {doc.employee?.first_name} {doc.employee?.last_name}
+                                                </td>
+                                                <td className="p-6 align-middle capitalize">
+                                                    {doc.document_type.replace(/_/g, " ")}
+                                                </td>
+                                                <td className="p-6 align-middle">
+                                                    <Badge variant="secondary" className={cn("capitalize shadow-none border-none", getStatusColor(doc.verification_status))}>
+                                                        {doc.verification_status.replace(/_/g, " ")}
+                                                    </Badge>
+                                                </td>
+                                                <td className="p-6 align-middle">
+                                                    {new Date(doc.created_at).toLocaleDateString()}
+                                                </td>
+                                                <td className="p-6 align-middle text-right">
+                                                    <Button variant="ghost" size="sm" onClick={() => handleVerifyClick(doc)}>Details</Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {(!filteredAllDocs || filteredAllDocs.length === 0) && (
+                                            <tr>
+                                                <td colSpan={5} className="p-10 text-center text-muted-foreground">
+                                                    No documents found.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </Tabs>
+
+            <VerificationDialog
+                document={selectedDoc}
+                open={dialogOpen}
+                onOpenChange={setDialogOpen}
+            />
         </div>
     )
 }

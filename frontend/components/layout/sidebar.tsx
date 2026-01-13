@@ -31,6 +31,28 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
 
+  const normalizePath = (path: string) =>
+    path.replace(/\/$/, "");
+
+  const isActive = (itemHref: string, pathname: string) => {
+    const current = normalizePath(pathname);
+    const target = normalizePath(itemHref);
+
+    // Exact match
+    if (current === target) return true;
+
+    // Child route match (but exclude dashboard root)
+    if (
+      target !== "/dashboard" &&
+      current.startsWith(target + "/")
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
+
   return (
     <div className="flex h-full w-64 flex-col border-r bg-background/50 backdrop-blur-xl">
       <div className="flex h-16 items-center px-6 border-b">
@@ -38,14 +60,14 @@ export function Sidebar() {
       </div>
       <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
         {navigation.map((item) => {
-          const isActive = pathname === item.href;
+          const active = isActive(item.href, pathname);
           return (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isActive
+                active
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
@@ -57,7 +79,7 @@ export function Sidebar() {
         })}
       </div>
       <div className="border-t p-4">
-        <button 
+        <button
           onClick={() => logout()}
           className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
         >

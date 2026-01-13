@@ -1,24 +1,26 @@
 "use client"
 
 import Link from "next/link";
-import { User, Users, ShieldAlert } from "lucide-react";
+import { User, Users, ShieldAlert, BarChart3 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface LeavesNavProps {
     isManager: boolean;
     isAdmin: boolean;
+    isSuperAdmin: boolean;
 }
 
-export function LeavesNav({ isManager, isAdmin }: LeavesNavProps) {
+export function LeavesNav({ isManager, isAdmin, isSuperAdmin }: LeavesNavProps) {
     const pathname = usePathname();
 
     if (!isManager && !isAdmin) return null;
 
     const navItems = [
-        { href: "/dashboard/leaves/employee", label: "My Leaves", icon: User },
+        ...(!isSuperAdmin ? [{ href: "/dashboard/leaves/employee", label: "My Leaves", icon: User }] : []),
         ...(isManager ? [{ href: "/dashboard/leaves/manager", label: "Team Desk", icon: Users }] : []),
         ...(isAdmin ? [{ href: "/dashboard/leaves/admin", label: "Admin Control", icon: ShieldAlert }] : []),
+        ...(isAdmin ? [{ href: "/dashboard/leaves/reports", label: "Reports", icon: BarChart3 }] : []),
     ];
 
     return (
@@ -26,13 +28,13 @@ export function LeavesNav({ isManager, isAdmin }: LeavesNavProps) {
             {navItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (
-                    <Link 
+                    <Link
                         key={item.href}
                         href={item.href}
                         className={cn(
                             "flex items-center gap-2 px-5 py-2 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all duration-300",
-                            isActive 
-                                ? "bg-white text-primary shadow-sm" 
+                            isActive
+                                ? "bg-white text-primary shadow-sm"
                                 : "text-muted-foreground hover:text-foreground"
                         )}
                     >

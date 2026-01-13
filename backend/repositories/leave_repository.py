@@ -91,9 +91,11 @@ class LeaveRepository:
 
     def get_pending_applications_for_approver(self, db: Session, approver_id: int) -> List[LeaveApplication]:
          # Uses manager_id to find direct reports
+         # Manager only sees Level 1 pending approvals
          apps = db.query(LeaveApplication).join(Employee, LeaveApplication.employee_id == Employee.id).filter(
              Employee.manager_id == approver_id,
-             LeaveApplication.status == LeaveApplicationStatus.pending
+             LeaveApplication.status == LeaveApplicationStatus.pending,
+             LeaveApplication.current_approval_step == 1
          ).all()
          for app in apps:
             app.leave_type_name = app.leave_type.name.value.replace('_', ' ').title() if app.leave_type else None
@@ -121,5 +123,23 @@ class LeaveRepository:
             PublicHoliday.holiday_date >= start_date,
             PublicHoliday.holiday_date <= end_date
         ).order_by(PublicHoliday.holiday_date).all()
+
+    def get_holiday(self, db: Session, holiday_id: int) -> Optional[PublicHoliday]:
+        return db.query(PublicHoliday).filter(PublicHoliday.id == holiday_id).first()
+
+    def create_holiday(self, db: Session, holiday: PublicHoliday) -> PublicHoliday:
+        db.add(holiday)
+        db.commit()
+        db.refresh(holiday)
+        return holiday
+
+    def update_holiday(self, db: Session, holiday: PublicHoliday) -> PublicHoliday:
+        db.commit()
+        db.refresh(holiday)
+        return holiday
+
+    def delete_holiday(self, db: Session, holiday: PublicHoliday):
+        db.delete(holiday)
+        db.commit()
 
 leave_repository = LeaveRepository()

@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, condecimal
 from typing import Optional, List
 from datetime import date, datetime
 from backend.models.leave import LeaveTypeEnum, LeaveApplicationStatus, HolidayType
+from backend.schemas.employee import EmployeeResponse
 
 # Leave Type Schemas
 class LeaveTypeBase(BaseModel):
@@ -22,6 +23,7 @@ class LeaveTypeBase(BaseModel):
     max_consecutive_days: Optional[int] = None
     gender_eligibility: str = "All"
     requires_document: bool = False
+    approval_levels: int = 1
 
 class LeaveTypeResponse(LeaveTypeBase):
     id: int
@@ -47,6 +49,7 @@ class LeaveBalanceResponse(LeaveBalanceBase):
     pending_approval: float
     encashed: float
     leave_type: LeaveTypeResponse
+    employee: Optional[EmployeeResponse] = None
 
     class Config:
         from_attributes = True
@@ -78,6 +81,7 @@ class LeaveApplicationResponse(LeaveApplicationCreate):
     employee_name: Optional[str] = None # Helper for UI
     leave_type_name: Optional[str] = None # Helper for UI
     approver_note: Optional[str] = None
+    current_approval_step: int = 1
 
     class Config:
         from_attributes = True
@@ -92,9 +96,24 @@ class PublicHolidayBase(BaseModel):
     description: Optional[str] = None
     recurring: bool = False
 
+class PublicHolidayCreate(PublicHolidayBase):
+    pass
+
+class PublicHolidayUpdate(BaseModel):
+    name: Optional[str] = None
+    holiday_date: Optional[date] = None
+    holiday_type: Optional[HolidayType] = None
+    location_id: Optional[int] = None
+    is_restricted: Optional[bool] = None
+    description: Optional[str] = None
+    recurring: Optional[bool] = None
+
 class PublicHolidayResponse(PublicHolidayBase):
     id: int
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+class LeaveApprovalAction(BaseModel):
+    comments: Optional[str] = None

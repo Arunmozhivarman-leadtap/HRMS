@@ -22,9 +22,13 @@ import {
     getMyCreditRequests,
     getPendingCreditRequests,
     approveLeaveCredit,
-    rejectLeaveCredit
+    rejectLeaveCredit,
+    createHoliday,
+    updateHoliday,
+    deleteHoliday,
+    getLeaveAnalytics
 } from "../api";
-import { LeaveApplicationCreate, LeaveType, LeaveCreditRequestCreate } from "@/types/leave";
+import { LeaveApplicationCreate, LeaveType, LeaveCreditRequestCreate, PublicHoliday } from "@/types/leave";
 import { useToast } from "@/hooks/use-toast";
 
 export const useLeaveTypes = () => {
@@ -142,6 +146,13 @@ export const useLeaveStats = (year?: number) => {
     return useQuery({
         queryKey: ["leave-stats", year],
         queryFn: () => getLeaveStats(year),
+    });
+};
+
+export const useLeaveAnalytics = (year?: number) => {
+    return useQuery({
+        queryKey: ["leave-analytics", year],
+        queryFn: () => getLeaveAnalytics(year),
     });
 };
 
@@ -351,6 +362,54 @@ export const useRejectLeaveCredit = () => {
                 description: error.message || "Failed to reject credit.",
                 variant: "destructive",
             });
+        },
+    });
+};
+
+export const useCreateHoliday = () => {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    return useMutation({
+        mutationFn: (data: Partial<PublicHoliday>) => createHoliday(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["public-holidays"] });
+            toast({ title: "Success", description: "Holiday created successfully." });
+        },
+        onError: (error: Error) => {
+            toast({ title: "Error", description: error.message || "Failed to create holiday.", variant: "destructive" });
+        },
+    });
+};
+
+export const useUpdateHoliday = () => {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    return useMutation({
+        mutationFn: ({ id, data }: { id: number, data: Partial<PublicHoliday> }) => updateHoliday(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["public-holidays"] });
+            toast({ title: "Success", description: "Holiday updated successfully." });
+        },
+        onError: (error: Error) => {
+            toast({ title: "Error", description: error.message || "Failed to update holiday.", variant: "destructive" });
+        },
+    });
+};
+
+export const useDeleteHoliday = () => {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    return useMutation({
+        mutationFn: (id: number) => deleteHoliday(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["public-holidays"] });
+            toast({ title: "Success", description: "Holiday deleted successfully." });
+        },
+        onError: (error: Error) => {
+            toast({ title: "Error", description: error.message || "Failed to delete holiday.", variant: "destructive" });
         },
     });
 };

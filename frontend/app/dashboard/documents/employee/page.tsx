@@ -51,7 +51,7 @@ const bankingSchema = z.object({
     path: ["confirm_account_number"],
 })
 
-type DocumentType = 
+type DocumentType =
     | "aadhaar_card" | "pan_card" | "passport" | "voter_id" | "driving_licence"
     | "bank_details" | "cancelled_cheque" | "10th_marksheet" | "12th_marksheet"
     | "degree_certificate" | "provisional_certificate" | "post_graduate_degree"
@@ -101,9 +101,9 @@ const DOCUMENT_CATEGORIES = [
         name: "Financial & Tax",
         description: "Banking and tax related documents",
         items: [
-             { type: "bank_info", label: "Bank Account Details", required: false, hasExpiry: false, allowMultiple: false, isStatic: true },
-             { type: "cancelled_cheque", label: "Cancelled Cheque", required: true, hasExpiry: false, allowMultiple: false },
-             { type: "form_16", label: "Form 16", required: false, hasExpiry: false, allowMultiple: false },
+            { type: "bank_info", label: "Bank Account Details", required: false, hasExpiry: false, allowMultiple: false, isStatic: true },
+            { type: "cancelled_cheque", label: "Cancelled Cheque", required: true, hasExpiry: false, allowMultiple: false },
+            { type: "form_16", label: "Form 16", required: false, hasExpiry: false, allowMultiple: false },
         ]
     },
     {
@@ -121,9 +121,9 @@ const DOCUMENT_CATEGORIES = [
         name: "Other Documents",
         description: "Personal and medical documents",
         items: [
-             { type: "address_proof", label: "Address Proof", required: true, hasExpiry: false, allowMultiple: false },
-             { type: "marriage_certificate", label: "Marriage Certificate", required: false, hasExpiry: false, allowMultiple: false },
-             { type: "medical_fitness_certificate", label: "Medical Fitness Certificate", required: false, hasExpiry: false, allowMultiple: false },
+            { type: "address_proof", label: "Address Proof", required: true, hasExpiry: false, allowMultiple: false },
+            { type: "marriage_certificate", label: "Marriage Certificate", required: false, hasExpiry: false, allowMultiple: false },
+            { type: "medical_fitness_certificate", label: "Medical Fitness Certificate", required: false, hasExpiry: false, allowMultiple: false },
         ]
     }
 ]
@@ -134,7 +134,7 @@ export default function EmployeeDocumentsPage() {
     const { data: profile } = useEmployeeProfile()
     const updateBanking = useUpdateBankingInfo()
     const queryClient = useQueryClient()
-    
+
     const [uploadingType, setUploadingType] = useState<string | null>(null)
     const [isEditingBanking, setIsEditingBanking] = useState(false)
     const [expiryDates, setExpiryDates] = useState<Record<string, string>>({})
@@ -191,7 +191,7 @@ export default function EmployeeDocumentsPage() {
             formData.append("document_type", type)
             if (expiry) formData.append("expiry_date", expiry)
             formData.append("files", file)
-            
+
             return fetcher("/documents/upload", {
                 method: "POST",
                 body: formData,
@@ -230,7 +230,7 @@ export default function EmployeeDocumentsPage() {
                 toast({ title: "Size Limit", description: "File exceeds 10MB limit", variant: "destructive" })
                 return
             }
-            
+
             const expiry = hasExpiry ? expiryDates[type] : undefined
             if (hasExpiry && !expiry) {
                 toast({ title: "Date Required", description: "Please select an expiry date first", variant: "destructive" })
@@ -244,12 +244,12 @@ export default function EmployeeDocumentsPage() {
 
     const getStatusColorClass = (status?: VerificationStatus) => {
         switch (status) {
-            case "verified": return "bg-emerald-50 text-emerald-700 border-emerald-100";
-            case "pending": return "bg-amber-50 text-amber-700 border-amber-100";
-            case "rejected": return "bg-rose-50 text-rose-700 border-rose-100";
-            case "reupload_required": return "bg-blue-50 text-blue-700 border-blue-100";
-            case "expired": return "bg-zinc-100 text-zinc-700 border-zinc-200";
-            default: return "bg-zinc-50 text-zinc-500 border-zinc-100";
+            case "verified": return "bg-green-100 text-green-700";
+            case "pending": return "bg-orange-100 text-orange-700";
+            case "rejected": return "bg-red-100 text-red-700";
+            case "reupload_required": return "bg-blue-100 text-blue-700";
+            case "expired": return "bg-zinc-100 text-zinc-700";
+            default: return "bg-muted text-muted-foreground";
         }
     }
 
@@ -276,8 +276,8 @@ export default function EmployeeDocumentsPage() {
     }
 
     return (
-        <div className="space-y-8 pb-24 max-w-6xl">
-    
+        <div className="space-y-8">
+
 
             {isLoading ? (
                 <div className="flex items-center justify-center py-32">
@@ -287,84 +287,79 @@ export default function EmployeeDocumentsPage() {
                 <div className="space-y-12">
                     {DOCUMENT_CATEGORIES.map((category) => (
                         <div key={category.name} className="space-y-6">
-                            <div className="space-y-1">
-                                <h4 className="text-lg font-semibold text-foreground">{category.name}</h4>
-                                <p className="text-sm text-muted-foreground">{category.description}</p>
+                            <div className="flex flex-col gap-1">
+                                <h4 className="text-xl font-serif font-medium text-foreground">{category.name}</h4>
+                                <p className="text-xs text-muted-foreground">{category.description}</p>
                             </div>
-                            
+
                             <div className="grid gap-6">
                                 {category.items.map((item) => {
                                     if (item.type === "bank_info") {
                                         const hasData = !!profile?.bank_name;
                                         if (isEditingBanking) {
                                             return (
-                                                <Card key={item.type} className="rounded-xl border-primary/20 shadow-md bg-white overflow-hidden">
-                                                    <CardContent className="p-0">
-                                                        <div className="flex flex-col">
-                                                            <div className="p-6 bg-muted/30 border-b border-border/40 flex items-center justify-between">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="p-2 rounded-lg bg-primary text-white shadow-sm">
-                                                                        <CreditCard className="h-4 w-4" />
-                                                                    </div>
-                                                                    <h4 className="font-bold text-sm tracking-tight">Bank Account Setup</h4>
-                                                                </div>
-                                                                <Button size="icon" variant="ghost" onClick={() => setIsEditingBanking(false)} className="h-8 w-8">
-                                                                    <X className="h-4 w-4 text-muted-foreground" />
-                                                                </Button>
+                                                <Card key={item.type} className="bg-background border shadow-sm rounded-xl overflow-hidden">
+                                                    <div className="p-6 bg-muted/20 border-b border-border/40 flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                                                                <CreditCard className="h-4 w-4" />
                                                             </div>
-                                                            <Form {...form}>
-                                                                <form onSubmit={form.handleSubmit(onBankingSubmit)} className="p-6 space-y-6">
-                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                                        <FormField control={form.control} name="bank_account_holder_name" render={({ field }) => (<FormItem><FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account Holder</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-zinc-200" /></FormControl><FormMessage /></FormItem>)} />
-                                                                        <FormField control={form.control} name="account_type" render={({ field }) => (<FormItem><FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10 border-zinc-200"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Savings">Savings</SelectItem><SelectItem value="Current">Current</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                                                                        <FormField control={form.control} name="bank_name" render={({ field }) => (<FormItem><FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bank Name</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-zinc-200" /></FormControl><FormMessage /></FormItem>)} />
-                                                                        <FormField control={form.control} name="branch_name" render={({ field }) => (<FormItem><FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Branch Name</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-zinc-200" /></FormControl><FormMessage /></FormItem>)} />
-                                                                        <FormField control={form.control} name="account_number" render={({ field }) => (<FormItem><FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account Number</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-zinc-200" /></FormControl><FormMessage /></FormItem>)} />
-                                                                        <FormField control={form.control} name="confirm_account_number" render={({ field }) => (<FormItem><FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Confirm Account Number</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-zinc-200" /></FormControl><FormMessage /></FormItem>)} />
-                                                                        <FormField control={form.control} name="ifsc_code" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">IFSC Code</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-zinc-200" /></FormControl><FormMessage /></FormItem>)} />
-                                                                    </div>
-                                                                    <div className="flex justify-end gap-3 pt-6 border-t border-border/40">
-                                                                        <Button type="button" variant="ghost" onClick={() => setIsEditingBanking(false)} className="h-10 px-6 text-sm font-medium text-muted-foreground hover:text-foreground">Cancel</Button>
-                                                                        <Button type="submit" disabled={updateBanking.isPending} className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-8 text-sm font-bold shadow-md transition-all active:scale-95">
-                                                                            {updateBanking.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Details"}
-                                                                        </Button>
-                                                                    </div>
-                                                                </form>
-                                                            </Form>
+                                                            <h3 className="font-bold text-[11px] text-muted-foreground tracking-wider uppercase">Bank Account Setup</h3>
                                                         </div>
+                                                        <Button size="icon" variant="ghost" onClick={() => setIsEditingBanking(false)} className="h-8 w-8 rounded-full">
+                                                            <X className="h-4 w-4 text-muted-foreground" />
+                                                        </Button>
+                                                    </div>
+                                                    <CardContent className="p-6 lg:p-8">
+                                                        <Form {...form}>
+                                                            <form onSubmit={form.handleSubmit(onBankingSubmit)} className="space-y-6">
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                                                    <FormField control={form.control} name="bank_account_holder_name" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Account Holder</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-border/60 focus:ring-primary/20" /></FormControl><FormMessage /></FormItem>)} />
+                                                                    <FormField control={form.control} name="account_type" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Account Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10 border-border/60"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Savings">Savings</SelectItem><SelectItem value="Current">Current</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                                                                    <FormField control={form.control} name="bank_name" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Bank Name</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-border/60" /></FormControl><FormMessage /></FormItem>)} />
+                                                                    <FormField control={form.control} name="branch_name" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Branch Name</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-border/60" /></FormControl><FormMessage /></FormItem>)} />
+                                                                    <FormField control={form.control} name="account_number" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Account Number</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-border/60" /></FormControl><FormMessage /></FormItem>)} />
+                                                                    <FormField control={form.control} name="confirm_account_number" render={({ field }) => (<FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Confirm Account Number</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-border/60" /></FormControl><FormMessage /></FormItem>)} />
+                                                                    <FormField control={form.control} name="ifsc_code" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">IFSC Code</FormLabel><FormControl><Input {...field} className="h-10 bg-background border-border/60" /></FormControl><FormMessage /></FormItem>)} />
+                                                                </div>
+                                                                <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+                                                                    <Button type="button" variant="ghost" onClick={() => setIsEditingBanking(false)} className="h-10 px-6 rounded-md font-medium transition-all hover:bg-muted text-sm border">Cancel</Button>
+                                                                    <Button type="submit" disabled={updateBanking.isPending} className="rounded-md h-10 px-8 font-bold shadow-sm active:scale-95 text-sm">
+                                                                        {updateBanking.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
+                                                                    </Button>
+                                                                </div>
+                                                            </form>
+                                                        </Form>
                                                     </CardContent>
                                                 </Card>
                                             );
                                         }
 
                                         return (
-                                            <Card key={item.type} className="rounded-xl border-zinc-200 shadow-sm bg-card overflow-hidden hover:shadow-md transition-all relative group">
-                                                {/* Top accent bar */}
-                                                <div className={cn("absolute top-0 left-0 w-full h-1 opacity-80", hasData ? "bg-emerald-500" : "bg-rose-500")} />
-
+                                            <Card key={item.type} className="bg-background border shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
                                                 <CardContent className="p-0">
-                                                    <div className="flex p-5 gap-5 items-start">
-                                                        <div className={cn("p-2.5 rounded-lg shrink-0 h-fit mt-0.5", hasData ? "bg-primary/10 text-primary" : "bg-zinc-100 text-zinc-400")}>
+                                                    <div className="flex p-5 lg:p-6 gap-6 items-center">
+                                                        <div className={cn("p-3 rounded-xl shrink-0 transition-colors duration-300", hasData ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground/50")}>
                                                             <CreditCard className="h-5 w-5" />
                                                         </div>
-                                                        <div className="flex-1 space-y-4">
-                                                            <div className="flex justify-between items-start">
-                                                                <div>
-                                                                    <h4 className="font-semibold text-sm text-foreground">{item.label}</h4>
-                                                                    <p className="text-xs text-muted-foreground mt-0.5">Payroll & Banking Information</p>
+                                                        <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                                            <div className="space-y-1">
+                                                                <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase">{item.label}</h4>
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={cn("px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight flex items-center gap-1.5", hasData ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
+                                                                        {hasData ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                                                                        <span>{hasData ? "Configured" : "Required"}</span>
+                                                                    </div>
+                                                                    {hasData && (
+                                                                        <span className="text-2xl font-serif font-medium text-foreground">
+                                                                            {profile.bank_name} <span className="text-sm font-sans text-muted-foreground font-normal ml-2">••{profile.account_number?.slice(-4)}</span>
+                                                                        </span>
+                                                                    )}
                                                                 </div>
-                                                                <Button variant="outline" size="sm" onClick={() => setIsEditingBanking(true)} className="h-8 text-xs font-medium shadow-sm">
-                                                                    {hasData ? "Update Details" : "Add Details"}
-                                                                </Button>
                                                             </div>
-
-                                                            <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border border-border/50">
-                                                                <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium", hasData ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100")}>
-                                                                    {hasData ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-                                                                    <span>{hasData ? "Active" : "Required"}</span>
-                                                                </div>
-                                                                {hasData && <span className="text-[10px] text-muted-foreground font-medium">{profile.bank_name} •••• {profile.account_number?.slice(-4)}</span>}
-                                                            </div>
+                                                            <Button variant="outline" size="sm" onClick={() => setIsEditingBanking(true)} className="rounded-md px-6 h-9 font-bold transition-all border shadow-none bg-white">
+                                                                {hasData ? "Modify Details" : "Set Up Now"}
+                                                            </Button>
                                                         </div>
                                                     </div>
                                                 </CardContent>
@@ -374,45 +369,54 @@ export default function EmployeeDocumentsPage() {
 
                                     const matchingDocs = documents?.filter(d => d.document_type === item.type) || []
                                     const hasDocs = matchingDocs.length > 0
-                                    const isMultipleAllowed = item.allowMultiple
-                                    const showUpload = !hasDocs || isMultipleAllowed
                                     const isItemUploading = uploadingType === item.type
 
                                     return (
-                                        <Card key={item.type} className="rounded-xl border-zinc-200 shadow-sm bg-card overflow-hidden transition-all hover:border-zinc-300 hover:shadow-md relative group">
-                                            {/* Top accent bar */}
-                                            <div className={cn("absolute top-0 left-0 w-full h-1 opacity-80",
-                                                hasDocs ? "bg-emerald-500" : item.required ? "bg-rose-500" : "bg-blue-500"
-                                            )} />
-
+                                        <Card key={item.type} className="bg-background border shadow-sm hover:shadow-md transition-all relative overflow-hidden">
                                             <CardContent className="p-0">
-                                                <div className="flex p-5 gap-5 items-start">
-                                                    {/* Icon */}
-                                                    <div className={cn("p-2.5 rounded-lg shrink-0 h-fit mt-0.5", hasDocs ? "bg-primary/10 text-primary" : "bg-zinc-100 text-zinc-400")}>
-                                                        <FileText className="h-5 w-5" />
+                                                <div className="flex flex-col md:flex-row p-5 lg:p-6 gap-6 lg:gap-8">
+                                                    {/* Primary Info */}
+                                                    <div className="flex items-start gap-5 lg:gap-6 flex-1 min-w-0">
+                                                        <div className={cn("p-3 rounded-xl shrink-0 mt-0.5", hasDocs ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground/50")}>
+                                                            <FileText className="h-5 w-5" />
+                                                        </div>
+                                                        <div className="space-y-3 min-w-0 flex-1">
+                                                            <div className="flex flex-wrap gap-3 items-center">
+                                                                <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase">{item.label}</h4>
+                                                                {item.required && !hasDocs && (
+                                                                    <Badge variant="outline" className="h-5 px-2 rounded text-[10px] font-medium bg-red-100 text-red-700 border-none shadow-none">
+                                                                        Required
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                                {item.required ? "Mandatory for profile verification." : "Optional supporting document."}
+                                                                {item.allowMultiple && " Support for multiple uploads."}
+                                                            </p>
+
+                                                            {!hasDocs && (
+                                                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight text-muted-foreground/60 w-fit">
+                                                                    <AlertTriangle className="h-3 w-3" />
+                                                                    <span>Not Uploaded</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
 
-                                                    {/* Main Content */}
-                                                    <div className="flex-1 space-y-4">
-                                                        {/* Header Row */}
-                                                        <div className="flex justify-between items-start gap-4">
-                                                            <div>
-                                                                <h4 className="font-semibold text-sm text-foreground">{item.label}</h4>
-                                                                <p className="text-xs text-muted-foreground mt-0.5">
-                                                                    {item.required ? "Mandatory Document" : "Optional Document"}
-                                                                    {item.allowMultiple && " • Multiple files allowed"}
-                                                                </p>
-                                                            </div>
+                                                    {/* Actions & List */}
+                                                    <div className="flex flex-col gap-4 w-full md:w-auto md:min-w-[300px] md:pl-6 lg:pl-8">
+                                                        {/* Upload Head */}
+                                                        <div className="flex items-center justify-end gap-4">
 
-                                                            {/* Upload Controls - Visible if upload allowed */}
-                                                            {showUpload && (
-                                                                <div className="flex items-center gap-3 animate-in fade-in zoom-in-95 duration-200">
+
+                                                            {(!hasDocs || item.allowMultiple) && (
+                                                                <div className="flex items-center gap-2">
                                                                     {item.hasExpiry && (
-                                                                        <div className="relative group">
-                                                                            <CalendarIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+                                                                        <div className="relative">
+                                                                            <CalendarIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/60 pointer-events-none" />
                                                                             <input
                                                                                 type="date"
-                                                                                className="h-8 w-32 pl-8 pr-2 text-[11px] font-medium bg-background border border-zinc-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer"
+                                                                                className="h-8 w-28 pl-7 pr-1 text-[10px] font-bold bg-muted/20 border border-border/40 rounded focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer"
                                                                                 value={expiryDates[item.type] || ""}
                                                                                 onChange={(e) => setExpiryDates(prev => ({ ...prev, [item.type]: e.target.value }))}
                                                                             />
@@ -433,105 +437,69 @@ export default function EmployeeDocumentsPage() {
                                                                             variant={hasDocs ? "outline" : "default"}
                                                                             size="sm"
                                                                             className={cn(
-                                                                                "h-8 text-xs font-medium gap-2 shadow-sm transition-all",
-                                                                                !hasDocs && "bg-primary text-primary-foreground hover:bg-primary/90",
-                                                                                hasDocs && "border-zinc-200 hover:bg-primary/5 hover:border-primary/20"
+                                                                                "h-8 px-4 rounded font-bold text-[11px] gap-2 transition-all shadow-sm",
+                                                                                !hasDocs && "bg-primary text-primary-foreground"
                                                                             )}
                                                                             disabled={isItemUploading || (item.hasExpiry && !expiryDates[item.type])}
                                                                         >
-                                                                            {isItemUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (hasDocs ? <Plus className="h-3.5 w-3.5" /> : <Upload className="h-3.5 w-3.5" />)}
-                                                                            {hasDocs ? "Add File" : "Upload"}
+                                                                            {isItemUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : (hasDocs ? <Plus className="h-3 w-3" /> : <Upload className="h-3 w-3" />)}
+                                                                            {hasDocs ? "Add" : "Upload"}
                                                                         </Button>
                                                                     </div>
                                                                 </div>
                                                             )}
                                                         </div>
 
-                                                        {/* Uploaded Files List */}
-                                                        {hasDocs ? (
-                                                            <div className="space-y-2 w-full">
-                                                                {matchingDocs.map((doc) => {
-                                                                    const isVerified = doc.verification_status === "verified";
-                                                                    const isPending = doc.verification_status === "pending";
-                                                                    const isRejected = doc.verification_status === "rejected";
-                                                                    const isExpired = doc.verification_status === "expired";
-                                                                    const needsReupload = doc.verification_status === "reupload_required";
-
-                                                                    return (
-                                                                        <div key={doc.id} className="group">
-                                                                            <div className="flex items-center justify-between p-4 rounded-lg bg-background border border-border/50 group-hover:border-border/80 transition-all duration-300 hover:shadow-sm">
-                                                                                {/* Status and Document Info */}
-                                                                                <div className="flex items-center gap-4 flex-1">
-                                                                                    {/* Status Indicator Dot */}
-                                                                                    <div className={cn(
-                                                                                        "w-2.5 h-2.5 rounded-full shrink-0",
-                                                                                        isVerified ? "bg-emerald-500" :
-                                                                                        isPending ? "bg-amber-500" :
-                                                                                        isRejected ? "bg-rose-500" :
-                                                                                        isExpired ? "bg-zinc-500" :
-                                                                                        needsReupload ? "bg-blue-500" : "bg-zinc-400"
-                                                                                    )} />
-
-                                                                                    <div className="flex items-center gap-3">
-                                                                                        <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium", getStatusColorClass(doc.verification_status))}>
-                                                                                            {getStatusIcon(doc.verification_status)}
-                                                                                            <span>{getStatusLabel(doc.verification_status)}</span>
-                                                                                        </div>
-
-                                                                                        {doc.expiry_date && (
-                                                                                            <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-medium px-2 py-1 bg-muted/50 rounded border border-border/30">
-                                                                                                <Clock className="h-3 w-3" />
-                                                                                                <span>Expires: {doc.expiry_date}</span>
-                                                                                            </div>
-                                                                                        )}
-                                                                                    </div>
+                                                        {/* Document List */}
+                                                        {hasDocs && (
+                                                            <div className="space-y-1">
+                                                                {matchingDocs.map((doc) => (
+                                                                    <div key={doc.id} className="group relative flex flex-col py-3 border-b border-border/40 last:border-0 transition-all">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <div className="flex items-center gap-3 justify-end flex-1 min-w-0">
+                                                                                <div className={cn("px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight", getStatusColorClass(doc.verification_status))}>
+                                                                                    {getStatusLabel(doc.verification_status)}
                                                                                 </div>
-
-                                                                                {/* Action Buttons */}
-                                                                                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
-                                                                                    <Button
-                                                                                        variant="ghost"
-                                                                                        size="icon"
-                                                                                        className="h-8 w-8 text-zinc-400 hover:text-primary hover:bg-primary/10 transition-all duration-200 rounded-md"
-                                                                                        asChild
-                                                                                    >
-                                                                                        <a href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer" title="Download document">
-                                                                                            <FileDown className="h-4 w-4" />
-                                                                                        </a>
-                                                                                    </Button>
-
-                                                                                    {doc.verification_status !== "verified" && (
-                                                                                        <Button
-                                                                                            variant="ghost"
-                                                                                            size="icon"
-                                                                                            className="h-8 w-8 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-all duration-200 rounded-md"
-                                                                                            onClick={() => deleteMutation.mutate(doc.id)}
-                                                                                            disabled={deleteMutation.isPending}
-                                                                                            title="Delete document"
-                                                                                        >
-                                                                                            {deleteMutation.isPending ? (
-                                                                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                                                            ) : (
-                                                                                                <Trash2 className="h-4 w-4" />
-                                                                                            )}
-                                                                                        </Button>
+                                                                                <div className="flex flex-col min-w-0">
+                                                                                    {doc.expiry_date && (
+                                                                                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">Exp: {doc.expiry_date}</span>
                                                                                     )}
                                                                                 </div>
                                                                             </div>
+
+                                                                            <div className="flex items-center gap-1">
+                                                                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded text-muted-foreground hover:text-primary" asChild>
+                                                                                    <a href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer">
+                                                                                        <FileDown className="h-3.5 w-3.5" />
+                                                                                    </a>
+                                                                                </Button>
+
+                                                                                {doc.verification_status !== "verified" && (
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="icon"
+                                                                                        className="h-7 w-7 rounded text-muted-foreground hover:text-red-600"
+                                                                                        onClick={() => deleteMutation.mutate(doc.id)}
+                                                                                        disabled={deleteMutation.isPending}
+                                                                                    >
+                                                                                        {deleteMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                                                                    </Button>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        ) : (
-                                                            // Empty State / Status Placeholder
-                                                            <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border border-border/50">
-                                                                <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium", item.required ? "bg-rose-50 text-rose-600 border border-rose-100" : "bg-zinc-50 text-zinc-500 border border-zinc-100")}>
-                                                                    {item.required ? <AlertCircle className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
-                                                                    <span>{item.required ? "Required" : "Optional"}</span>
-                                                                </div>
-                                                                <span className="text-[10px] text-muted-foreground font-medium">
-                                                                    {item.allowMultiple ? "Multiple files allowed" : "Single file required"}
-                                                                </span>
+
+                                                                        {/* Rejection/Re-upload Feedback */}
+                                                                        {(doc.verification_status === "rejected" || doc.verification_status === "reupload_required") && doc.notes && (
+                                                                            <div className="mt-2 text-xs bg-destructive/5 text-destructive p-3 rounded-md border border-destructive/10 flex items-start gap-2">
+                                                                                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                                                                                <div className="flex flex-col gap-0.5">
+                                                                                    <span className="font-semibold uppercase text-[10px] tracking-wider opacity-80">HR Feedback</span>
+                                                                                    <p className="leading-relaxed">{doc.notes}</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         )}
                                                     </div>

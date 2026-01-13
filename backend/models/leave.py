@@ -50,6 +50,7 @@ class LeaveType(Base):
     max_consecutive_days = Column(Integer, nullable=True)
     gender_eligibility = Column(String(20), default="All") # All, Male, Female
     requires_document = Column(Boolean, default=False)
+    approval_levels = Column(Integer, default=1)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -93,6 +94,7 @@ class LeaveApplication(Base):
     contact_email = Column(String(255), nullable=True)
     contact_phone = Column(String(10), nullable=True)
     approver_note = Column(Text, nullable=True)
+    current_approval_step = Column(Integer, default=1)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -100,6 +102,22 @@ class LeaveApplication(Base):
     employee = relationship("Employee", foreign_keys=[employee_id], backref="leave_applications")
     leave_type = relationship("LeaveType")
     approver = relationship("Employee", foreign_keys=[approver_id])
+    approval_logs = relationship("LeaveApprovalLog", back_populates="application")
+
+class LeaveApprovalLog(Base):
+    __tablename__ = "leave_approval_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("leave_applications.id", ondelete="CASCADE"))
+    approver_id = Column(Integer, ForeignKey("employees.id"))
+    step = Column(Integer, nullable=False)
+    status = Column(Enum(LeaveApplicationStatus), nullable=False) # approved, rejected
+    comments = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    application = relationship("LeaveApplication", back_populates="approval_logs")
+    approver = relationship("Employee")
 
 class PublicHoliday(Base):
     __tablename__ = "public_holidays"

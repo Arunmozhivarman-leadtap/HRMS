@@ -11,12 +11,14 @@ export interface Employee {
     employment_status: string;
     department_id?: number;
     designation_id?: number;
+    designation?: string;
     location_id?: number;
     manager_id?: number;
     employment_type: string;
     role: string;
     is_active: boolean;
     gender?: string;
+    full_name?: string;
 
     // Banking Info
     bank_account_holder_name?: string;

@@ -33,17 +33,18 @@ export interface LeaveType {
     annual_entitlement: number;
     requires_approval: boolean;
     carry_forward: boolean;
-    max_carry_forward?: number;
+    max_carry_forward?: number | null;
     encashment: boolean;
-    max_encashment_per_year?: number;
-    min_balance_to_encash?: number;
+    max_encashment_per_year?: number | null;
+    min_balance_to_encash?: number | null;
     accrual_method: string;
     pro_rata_settings?: Record<string, unknown>; // JSONB
     negative_balance_allowed: boolean;
-    min_days_in_advance?: number;
-    max_consecutive_days?: number;
+    min_days_in_advance?: number | null;
+    max_consecutive_days?: number | null;
     gender_eligibility?: string;
     requires_document?: boolean;
+    approval_levels?: number;
     created_at: string;
     updated_at?: string;
 }
@@ -61,6 +62,14 @@ export interface LeaveBalance {
     available: number;
     encashed: number;
     leave_type: LeaveType;
+    employee?: {
+        id: number;
+        full_name: string;
+        email: string;
+        employee_code?: string;
+        department_id?: number;
+        gender?: string;
+    };
 }
 
 export interface LeaveApplication {

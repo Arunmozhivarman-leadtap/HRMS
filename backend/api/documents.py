@@ -9,6 +9,9 @@ from backend.core.dependencies import get_current_user
 from backend.models.user import User, UserRole
 from backend.models.document import DocumentType, EmployeeDocument, DocumentVerificationStatus
 from backend.schemas.document import DocumentResponse, DocumentUpdate
+from backend.schemas.document_verification import DocumentVerificationUpdate
+from backend.models.employee import Employee
+
 from backend.repositories.document_repository import document_repository
 from backend.utils.file_storage import upload_file, get_file_stream, get_file_path, delete_file
 from backend.utils.audit import log_action
@@ -97,25 +100,62 @@ async def upload_documents(
 async def get_documents(
     employee_id: Optional[int] = None,
     document_type: Optional[DocumentType] = None,
+    verification_status: Optional[DocumentVerificationStatus] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Role Scoping
-    if current_user.role in [UserRole.employee, UserRole.manager]:
-        # Employee and Manager can only see their own documents
-        return document_repository.get_multi_by_employee(db, current_user.employee_id)
-    
-    # HR/Admin
-    if employee_id:
-        return document_repository.get_multi_by_employee(db, employee_id)
-    
-    # If no employee_id provided, return all (Admin/HR only)
-    if current_user.role not in [UserRole.hr_admin, UserRole.super_admin]:
-        raise HTTPException(status_code=403, detail="Not authorized to view all documents")
-        
     query = db.query(EmployeeDocument)
+
+    # Role Scoping
+    if current_user.role == UserRole.employee:
+        # Employee can only see their own documents
+        query = query.filter(EmployeeDocument.employee_id == current_user.employee_id)
+    
+    elif current_user.role == UserRole.manager:
+        # Manager: Own documents + Team's VERIFIED documents
+        # Get team members
+        team_members = db.query(Employee.id).filter(Employee.manager_id == current_user.employee_id).all()
+        team_ids = [t[0] for t in team_members]
+        
+        if employee_id:
+            # If specific employee requested
+            if employee_id == current_user.employee_id:
+                query = query.filter(EmployeeDocument.employee_id == employee_id)
+            elif employee_id in team_ids:
+                query = query.filter(
+                    EmployeeDocument.employee_id == employee_id,
+                    EmployeeDocument.verification_status == DocumentVerificationStatus.verified
+                )
+            else:
+                raise HTTPException(status_code=403, detail="Not authorized to view this employee's documents")
+        else:
+            # List all allowed: Own + Team (Verified only)
+            # This requires a complex OR condition or union. simpler to just return own here if filtered by nothing?
+            # Usually the UI requests specific employee or "My Documents".
+            # But the "Team Documents" view might want all.
+            # Let's use an OR condition: (id=self) OR (id IN team AND status=verified)
+            from sqlalchemy import or_, and_
+            query = query.filter(
+                or_(
+                    EmployeeDocument.employee_id == current_user.employee_id,
+                    and_(
+                        EmployeeDocument.employee_id.in_(team_ids),
+                        EmployeeDocument.verification_status == DocumentVerificationStatus.verified
+                    )
+                )
+            )
+
+    else: # HR/Admin
+        if employee_id:
+            query = query.filter(EmployeeDocument.employee_id == employee_id)
+    
+    # Common filters
     if document_type:
         query = query.filter(EmployeeDocument.document_type == document_type)
+    
+    if verification_status:
+        query = query.filter(EmployeeDocument.verification_status == verification_status)
+        
     return query.all()
 
 @router.get("/{id}/download")
@@ -146,7 +186,7 @@ async def download_document(
 @router.patch("/{id}/verify", response_model=DocumentResponse)
 async def verify_document(
     id: int,
-    obj_in: DocumentUpdate,
+    obj_in: DocumentVerificationUpdate,
     request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -159,7 +199,7 @@ async def verify_document(
         raise HTTPException(status_code=404, detail="Document not found")
     
     # Update status
-    db_doc.verification_status = obj_in.verification_status
+    db_doc.verification_status = obj_in.status
     db_doc.notes = obj_in.notes
     db_doc.verified_by_id = current_user.id
     db_doc.verified_date = func.now()
@@ -196,8 +236,10 @@ async def get_expiries(
     if current_user.role == UserRole.employee:
         query = query.filter(EmployeeDocument.employee_id == current_user.employee_id)
     elif current_user.role == UserRole.manager:
-        # TODO: Filter by team reports
-        pass
+        # Filter by team reports
+        team_members = db.query(Employee.id).filter(Employee.manager_id == current_user.employee_id).all()
+        team_ids = [t[0] for t in team_members]
+        query = query.filter(EmployeeDocument.employee_id.in_(team_ids))
     
     return query.all()
 
@@ -243,18 +285,27 @@ async def get_document_reports(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    if current_user.role not in [UserRole.hr_admin, UserRole.super_admin]:
+    # Role Scoping
+    query = db.query(EmployeeDocument)
+    
+    if current_user.role == UserRole.manager:
+        # Filter by team
+        team_members = db.query(Employee.id).filter(Employee.manager_id == current_user.employee_id).all()
+        team_ids = [t[0] for t in team_members]
+        query = query.filter(EmployeeDocument.employee_id.in_(team_ids))
+    elif current_user.role not in [UserRole.hr_admin, UserRole.super_admin]:
         raise HTTPException(status_code=403, detail="Not authorized to view reports")
     
-    total_docs = db.query(EmployeeDocument).count()
-    verified_docs = db.query(EmployeeDocument).filter(EmployeeDocument.verification_status == DocumentVerificationStatus.verified).count()
-    pending_docs = db.query(EmployeeDocument).filter(EmployeeDocument.verification_status == DocumentVerificationStatus.pending).count()
-    rejected_docs = db.query(EmployeeDocument).filter(EmployeeDocument.verification_status == DocumentVerificationStatus.rejected).count()
+    # Calculate stats based on scoped query
+    total_docs = query.count()
+    verified_docs = query.filter(EmployeeDocument.verification_status == DocumentVerificationStatus.verified).count()
+    pending_docs = query.filter(EmployeeDocument.verification_status == DocumentVerificationStatus.pending).count()
+    rejected_docs = query.filter(EmployeeDocument.verification_status == DocumentVerificationStatus.rejected).count()
     
     # Expiry risks (within 30 days)
     from datetime import timedelta
     risk_date = date.today() + timedelta(days=30)
-    expiry_risks = db.query(EmployeeDocument).filter(EmployeeDocument.expiry_date <= risk_date).count()
+    expiry_risks = query.filter(EmployeeDocument.expiry_date <= risk_date).count()
     
     return {
         "total_documents": total_docs,

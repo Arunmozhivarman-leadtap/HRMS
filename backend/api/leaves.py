@@ -9,12 +9,27 @@ from backend.repositories.leave_repository import leave_repository
 from backend.schemas.leave import (
     LeaveApplicationCreate, LeaveApplicationResponse, 
     LeaveBalanceResponse, LeaveTypeResponse, PublicHolidayResponse,
-    LeaveTypeBase
+    LeaveTypeBase, LeaveApprovalAction, PublicHolidayCreate, PublicHolidayUpdate
 )
 from backend.schemas.leave_credit import LeaveCreditRequestCreate, LeaveCreditRequestResponse
 from backend.core.dependencies import get_current_user
 
 router = APIRouter()
+
+@router.get("/calendar/team", response_model=List[LeaveApplicationResponse])
+def get_team_calendar(
+    from_date: date,
+    to_date: date,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ['manager', 'hr_admin', 'super_admin']:
+         raise HTTPException(status_code=403, detail="Not authorized")
+    if not current_user.employee_id:
+         raise HTTPException(status_code=400, detail="User is not linked to an employee record")
+    
+    return leave_service.get_team_calendar(db, current_user.employee_id, from_date, to_date)
+
 
 @router.get("/types", response_model=List[LeaveTypeResponse])
 def get_leave_types(db: Session = Depends(get_db)):
@@ -170,6 +185,7 @@ def get_pending_approvals(
 @router.post("/approve/{application_id}", response_model=LeaveApplicationResponse)
 def approve_leave_request(
     application_id: int,
+    action: LeaveApprovalAction = None,
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -179,12 +195,13 @@ def approve_leave_request(
     if not current_user.employee_id:
          raise HTTPException(status_code=400, detail="Approver must be an employee")
 
-    # TODO: Add verification that the manager actually manages this employee if role is 'manager'
-    return leave_service.approve_leave(db, application_id, current_user.employee_id)
+    comments = action.comments if action else None
+    return leave_service.approve_leave(db, application_id, current_user.employee_id, role=current_user.role, comments=comments)
 
 @router.post("/reject/{application_id}", response_model=LeaveApplicationResponse)
 def reject_leave_request(
     application_id: int,
+    action: LeaveApprovalAction = None,
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -194,7 +211,8 @@ def reject_leave_request(
     if not current_user.employee_id:
          raise HTTPException(status_code=400, detail="Approver must be an employee")
          
-    return leave_service.reject_leave(db, application_id, current_user.employee_id)
+    comments = action.comments if action else None
+    return leave_service.reject_leave(db, application_id, current_user.employee_id, comments=comments)
 
 @router.put("/update/{application_id}", response_model=LeaveApplicationResponse)
 def update_leave_request(
@@ -249,12 +267,54 @@ def get_leave_statistics(
          raise HTTPException(status_code=403, detail="Not authorized")
     return leave_service.get_leave_stats(db, year)
 
+@router.get("/analytics")
+def get_leave_analytics(
+    year: int = Query(default=date.today().year),
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ['hr_admin', 'super_admin']:
+         raise HTTPException(status_code=403, detail="Not authorized")
+    return leave_service.get_leave_analytics(db, year)
+
 @router.get("/holidays", response_model=List[PublicHolidayResponse])
 def get_holidays(
     year: int = Query(default=date.today().year),
     db: Session = Depends(get_db)
 ):
     return leave_repository.get_holidays(db, year)
+
+@router.post("/holidays", response_model=PublicHolidayResponse)
+def create_holiday(
+    data: PublicHolidayCreate,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ['hr_admin', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return leave_service.create_holiday(db, data.model_dump())
+
+@router.put("/holidays/{holiday_id}", response_model=PublicHolidayResponse)
+def update_holiday(
+    holiday_id: int,
+    data: PublicHolidayUpdate,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ['hr_admin', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return leave_service.update_holiday(db, holiday_id, data.model_dump(exclude_unset=True))
+
+@router.delete("/holidays/{holiday_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_holiday(
+    holiday_id: int,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ['hr_admin', 'super_admin']:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    leave_service.delete_holiday(db, holiday_id)
+    return None
 
 @router.get("/applications/{application_id}/attachment")
 def get_leave_attachment(

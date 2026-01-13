@@ -3,8 +3,19 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Bell } from "lucide-react";
+import { useEmployeeProfile } from "@/hooks/use-employee";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function Header() {
+  const { data: employee, isLoading } = useEmployeeProfile();
+
+  const fullName = employee?.full_name || `${employee?.first_name} ${employee?.last_name}`.trim() || "User";
+  const initials = employee?.first_name && employee?.last_name
+    ? `${employee.first_name[0]}${employee.last_name[0]}`.toUpperCase()
+    : employee?.first_name
+      ? employee.first_name[0].toUpperCase()
+      : "U";
+
   return (
     <header className="flex h-16 items-center justify-between border-b bg-background/50 backdrop-blur-xl px-6">
       <div>
@@ -18,12 +29,21 @@ export function Header() {
         </Button>
         <div className="flex items-center gap-3 border-l pl-4">
           <div className="flex flex-col items-end">
-            <span className="text-sm font-medium">Rahul Sharma</span>
-            <span className="text-xs text-muted-foreground">Software Engineer</span>
+            {isLoading ? (
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            ) : (
+              <>
+                <span className="text-sm font-medium">{fullName}</span>
+                <span className="text-xs text-muted-foreground">{employee?.designation || "Employee"}</span>
+              </>
+            )}
           </div>
           <Avatar>
-            <AvatarImage src="/avatars/01.png" alt="Rahul" />
-            <AvatarFallback>RS</AvatarFallback>
+            <AvatarImage src={`/avatars/${employee?.id}.png`} alt={fullName} />
+            <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </div>
       </div>

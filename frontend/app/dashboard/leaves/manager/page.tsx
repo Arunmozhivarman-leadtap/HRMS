@@ -3,6 +3,7 @@
 import { usePendingApprovals, useTeamLeaveApplications } from "@/features/leaves/hooks/use-leaves"
 import { PendingApprovals } from "@/features/leaves/components/pending-approvals"
 import { LeaveHistoryTable } from "@/features/leaves/components/leave-history-table"
+import { TeamLeaveCalendar } from "@/features/leaves/components/team-leave-calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, CalendarCheck, Clock } from "lucide-react"
@@ -74,17 +75,17 @@ export default function ManagerLeavesPage() {
                         <TabsTrigger value="calendar">Availability Calendar</TabsTrigger>
                     </TabsList>
                 </div>
-                
+
                 <TabsContent value="history" className="mt-0">
-                    <LeaveHistoryTable 
-                        applications={teamApplications} 
-                        isLoading={isLoadingTeamApps} 
-                        variant="team" 
+                    <LeaveHistoryTable
+                        applications={teamApplications}
+                        isLoading={isLoadingTeamApps}
+                        variant="team"
                     />
                 </TabsContent>
-                
-                <TabsContent value="calendar" className="mt-0 text-center py-20 bg-muted/10 rounded-xl border border-dashed">
-                    <p className="text-sm text-muted-foreground">Team availability calendar view coming soon.</p>
+
+                <TabsContent value="calendar" className="mt-0">
+                    <TeamLeaveCalendar />
                 </TabsContent>
             </Tabs>
         </div>

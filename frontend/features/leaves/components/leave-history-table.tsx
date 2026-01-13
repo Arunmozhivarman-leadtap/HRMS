@@ -160,6 +160,7 @@ export function LeaveHistoryTable({ applications, isLoading, variant = 'self' }:
                                                         <div className="flex justify-end items-center gap-2">
                                                             <ApplyLeaveDialog
                                                                 application={app}
+                                                                applications={applications}
                                                                 trigger={
                                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
                                                                         <Pencil className="h-4 w-4" />

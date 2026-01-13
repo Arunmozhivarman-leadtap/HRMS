@@ -5,6 +5,7 @@ import { useAllLeaveApplications, usePendingApprovals } from "@/features/leaves/
 import { PendingApprovals } from "@/features/leaves/components/pending-approvals"
 import { LeaveHistoryTable } from "@/features/leaves/components/leave-history-table"
 import { LeaveUsageChart } from "@/features/leaves/components/leave-usage-chart"
+import { HolidayConfig } from "@/features/leaves/components/holiday-config"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -75,34 +76,36 @@ export default function AdminLeavesPage() {
                 ))}
             </div>
 
-            <div className="grid gap-8 grid-cols-1 lg:grid-cols-12">
-                <div className="lg:col-span-8">
-                    <PendingApprovals />
-                </div>
-                <div className="lg:col-span-4">
-                    <LeaveUsageChart />
-                </div>
+            <div className="">
+                <PendingApprovals />
+
             </div>
 
             <Tabs defaultValue="all-history" className="w-full">
                 <div className="flex items-center justify-between mb-4">
                     <TabsList>
                         <TabsTrigger value="all-history">All Leave History</TabsTrigger>
-                        <TabsTrigger value="policies">Policies Summary</TabsTrigger>
+                        <TabsTrigger value="holidays">Organization Holidays</TabsTrigger>
                     </TabsList>
                 </div>
-                
+
                 <TabsContent value="all-history" className="mt-0">
-                    <LeaveHistoryTable 
-                        applications={allApplications} 
-                        isLoading={isLoadingAllApps} 
-                        variant="admin" 
+                    <LeaveHistoryTable
+                        applications={allApplications}
+                        isLoading={isLoadingAllApps}
+                        variant="admin"
                     />
                 </TabsContent>
-                
-                <TabsContent value="policies" className="mt-0 text-center py-20 bg-muted/10 rounded-xl border border-dashed">
-                    <p className="text-sm text-muted-foreground">Configurable leave policies overview coming soon.</p>
+
+                <TabsContent value="holidays" className="mt-0">
+                    <Card className="border-zinc-200">
+                        <CardContent className="p-6">
+                            <HolidayConfig />
+                        </CardContent>
+                    </Card>
                 </TabsContent>
+
+
             </Tabs>
         </div>
     )

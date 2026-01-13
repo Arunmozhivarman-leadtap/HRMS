@@ -51,17 +51,27 @@ export const getPendingApprovals = async (): Promise<LeaveApplication[]> => {
 };
 
 export const approveLeave = async (id: number, note?: string): Promise<LeaveApplication> => {
-    const query = note ? `?note=${encodeURIComponent(note)}` : "";
-    return fetcher<LeaveApplication>(`/leaves/approve/${id}${query}`, {
+    return fetcher<LeaveApplication>(`/leaves/approve/${id}`, {
         method: "POST",
+        body: JSON.stringify({ comments: note }),
+        headers: {
+            "Content-Type": "application/json",
+        },
     });
 };
 
 export const rejectLeave = async (id: number, note?: string): Promise<LeaveApplication> => {
-    const query = note ? `?note=${encodeURIComponent(note)}` : "";
-    return fetcher<LeaveApplication>(`/leaves/reject/${id}${query}`, {
+    return fetcher<LeaveApplication>(`/leaves/reject/${id}`, {
         method: "POST",
+        body: JSON.stringify({ comments: note }),
+        headers: {
+            "Content-Type": "application/json",
+        },
     });
+};
+
+export const getTeamCalendar = async (fromDate: string, toDate: string): Promise<LeaveApplication[]> => {
+    return fetcher<LeaveApplication[]>(`/leaves/calendar/team?from_date=${fromDate}&to_date=${toDate}`);
 };
 
 export const updateLeave = async (id: number, data: LeaveApplicationCreate, attachment?: File, clearAttachment?: boolean): Promise<LeaveApplication> => {
@@ -154,6 +164,22 @@ export const getLeaveStats = async (year?: number): Promise<{
     }>(`/leaves/stats${query}`);
 };
 
+export const getLeaveAnalytics = async (year?: number): Promise<{
+    trends: { month: number, days: number }[];
+    department_utilization: { department: string, days: number }[];
+    type_utilization: { type: string, days: number }[];
+    liability: { total_el_days: number, total_lop_days: number };
+    top_absentees: { name: string, days: number }[];
+}> => {
+    const query = year ? `?year=${year}` : "";
+    return fetcher<{
+        trends: { month: number, days: number }[];
+        department_utilization: { department: string, days: number }[];
+        liability: { total_el_days: number };
+        top_absentees: { name: string, days: number }[];
+    }>(`/leaves/analytics${query}`);
+};
+
 // Credit Requests
 export const requestLeaveCredit = async (data: LeaveCreditRequestCreate): Promise<LeaveCreditRequest> => {
     return fetcher<LeaveCreditRequest>("/leaves/credit", {
@@ -176,4 +202,25 @@ export const approveLeaveCredit = async (id: number): Promise<LeaveCreditRequest
 
 export const rejectLeaveCredit = async (id: number): Promise<LeaveCreditRequest> => {
     return fetcher<LeaveCreditRequest>(`/leaves/credit/${id}/reject`, { method: "POST" });
+};
+
+// Holidays
+export const createHoliday = async (data: Partial<PublicHoliday>): Promise<PublicHoliday> => {
+    return fetcher<PublicHoliday>("/leaves/holidays", {
+        method: "POST",
+        body: JSON.stringify(data),
+    });
+};
+
+export const updateHoliday = async (id: number, data: Partial<PublicHoliday>): Promise<PublicHoliday> => {
+    return fetcher<PublicHoliday>(`/leaves/holidays/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+    });
+};
+
+export const deleteHoliday = async (id: number): Promise<void> => {
+    return fetcher<void>(`/leaves/holidays/${id}`, {
+        method: "DELETE",
+    });
 };
