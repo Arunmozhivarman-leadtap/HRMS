@@ -163,20 +163,7 @@ export function SignInForm({ className, ...props }: React.HTMLAttributes<HTMLDiv
         Sign in with Google
       </Button>
       
-      <div className="relative my-2">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-muted" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
-            Protected System
-          </span>
-        </div>
-      </div>
       
-      <p className="text-center text-xs text-muted-foreground">
-        Restricted access for LeadTap employees only.
-      </p>
     </div>
   )
 }

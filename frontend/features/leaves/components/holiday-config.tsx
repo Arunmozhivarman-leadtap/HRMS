@@ -37,7 +37,6 @@ const holidaySchema = z.object({
     name: z.string().min(1, "Name is required"),
     holiday_date: z.string().min(1, "Date is required"),
     holiday_type: z.nativeEnum(HolidayType),
-    location_id: z.coerce.number().optional().nullable(),
     is_restricted: z.boolean(),
     description: z.string().optional().nullable(),
     recurring: z.boolean(),
@@ -59,7 +58,6 @@ export const HolidayConfig = () => {
             name: "",
             holiday_date: "",
             holiday_type: HolidayType.national,
-            location_id: undefined,
             is_restricted: false,
             description: "",
             recurring: false,
@@ -72,7 +70,6 @@ export const HolidayConfig = () => {
             name: holiday.name,
             holiday_date: holiday.holiday_date,
             holiday_type: holiday.holiday_type,
-            location_id: holiday.location_id ?? undefined,
             is_restricted: holiday.is_restricted,
             description: holiday.description || "",
             recurring: holiday.recurring,
@@ -85,7 +82,6 @@ export const HolidayConfig = () => {
             name: values.name,
             holiday_date: values.holiday_date,
             holiday_type: values.holiday_type,
-            location_id: values.location_id ?? undefined,
             is_restricted: values.is_restricted,
             description: values.description || undefined,
             recurring: values.recurring,
@@ -147,7 +143,6 @@ export const HolidayConfig = () => {
                             name: "",
                             holiday_date: "",
                             holiday_type: HolidayType.national,
-                            location_id: null,
                             is_restricted: false,
                             description: "",
                             recurring: false,
@@ -214,7 +209,7 @@ export const HolidayConfig = () => {
                                                     <Globe className="h-3 w-3" />
                                                 </div>
                                                 <p className="text-[11px] font-bold text-zinc-600 uppercase tracking-tight">
-                                                    {holiday.location_id ? `Location ID: ${holiday.location_id}` : "Global (All Locations)"}
+                                                    Global (All Locations)
                                                 </p>
                                             </div>
                                             {holiday.description && (
@@ -383,7 +378,7 @@ export const HolidayConfig = () => {
                     }
                 }}
                 title="Abolish Holiday Control?"
-                description="This will permanently remove this holiday from the system across all locations. Past leave applications already processed using this definition will not be retroactively re-calculated."
+                description="This will permanently remove this holiday from the system. Past leave applications already processed using this definition will not be retroactively re-calculated."
                 isLoading={isDeleting}
             />
         </div>

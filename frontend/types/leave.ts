@@ -111,7 +111,6 @@ export interface PublicHoliday {
     name: string;
     holiday_date: string;
     holiday_type: HolidayType;
-    location_id?: number;
     is_restricted: boolean;
     description?: string;
     recurring: boolean;

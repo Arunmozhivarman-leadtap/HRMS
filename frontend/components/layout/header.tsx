@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Bell } from "lucide-react";
 import { useEmployeeProfile } from "@/hooks/use-employee";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getPhotoUrl } from "@/lib/utils";
 
 export function Header() {
   const { data: employee, isLoading } = useEmployeeProfile();
@@ -15,6 +16,8 @@ export function Header() {
     : employee?.first_name
       ? employee.first_name[0].toUpperCase()
       : "U";
+
+  const photoUrl = getPhotoUrl(employee?.profile_photo);
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-background/50 backdrop-blur-xl px-6">
@@ -37,12 +40,12 @@ export function Header() {
             ) : (
               <>
                 <span className="text-sm font-medium">{fullName}</span>
-                <span className="text-xs text-muted-foreground">{employee?.designation || "Employee"}</span>
+                <span className="text-xs text-muted-foreground capitalize">{employee?.role.replace("_", " ") || "Employee"}</span>
               </>
             )}
           </div>
           <Avatar>
-            <AvatarImage src={`/avatars/${employee?.id}.png`} alt={fullName} />
+            <AvatarImage src={photoUrl} alt={fullName} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </div>

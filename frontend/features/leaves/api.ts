@@ -175,7 +175,8 @@ export const getLeaveAnalytics = async (year?: number): Promise<{
     return fetcher<{
         trends: { month: number, days: number }[];
         department_utilization: { department: string, days: number }[];
-        liability: { total_el_days: number };
+        type_utilization: { type: string, days: number }[];
+        liability: { total_el_days: number, total_lop_days: number };
         top_absentees: { name: string, days: number }[];
     }>(`/leaves/analytics${query}`);
 };
