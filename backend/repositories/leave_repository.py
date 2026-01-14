@@ -72,7 +72,8 @@ class LeaveRepository:
         employee_id: Optional[int] = None, 
         status: Optional[str] = None, 
         year: Optional[int] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
+        exclude_employee_id: Optional[int] = None
     ) -> Tuple[List[LeaveApplication], int]:
         query = db.query(LeaveApplication).join(Employee, LeaveApplication.employee_id == Employee.id).join(LeaveType, LeaveApplication.leave_type_id == LeaveType.id)
         
@@ -86,6 +87,9 @@ class LeaveRepository:
             start_date = date(year, 1, 1)
             end_date = date(year, 12, 31)
             query = query.filter(LeaveApplication.from_date >= start_date, LeaveApplication.from_date <= end_date)
+        
+        if exclude_employee_id:
+            query = query.filter(LeaveApplication.employee_id != exclude_employee_id)
         
         if search:
             from sqlalchemy import or_
@@ -128,10 +132,12 @@ class LeaveRepository:
     def get_pending_applications_for_approver(self, db: Session, approver_id: int, skip: int = 0, limit: int = 10, search: Optional[str] = None) -> Tuple[List[LeaveApplication], int]:
          # Uses manager_id to find direct reports
          # Manager only sees Level 1 pending approvals
+         # Explicitly exclude the approver's own applications if they somehow report to themselves or if the query structure allows it
          query = db.query(LeaveApplication).join(Employee, LeaveApplication.employee_id == Employee.id).filter(
              Employee.manager_id == approver_id,
              LeaveApplication.status == LeaveApplicationStatus.pending,
-             LeaveApplication.current_approval_step == 1
+             LeaveApplication.current_approval_step == 1,
+             LeaveApplication.employee_id != approver_id
          )
          
          if search:

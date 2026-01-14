@@ -122,8 +122,21 @@ class DashboardService:
 
     def _get_employee_stats(self, db: Session, employee_id: int) -> List[DashboardStat]:
         # Leave Balance
-        balances = db.query(LeaveBalance).filter(LeaveBalance.employee_id == employee_id, LeaveBalance.leave_year == date.today().year).all()
-        total_balance = sum(float(b.available) for b in balances)
+        employee = db.query(Employee).filter(Employee.id == employee_id).first()
+        balances = db.query(LeaveBalance).join(LeaveType, LeaveBalance.leave_type_id == LeaveType.id).filter(LeaveBalance.employee_id == employee_id, LeaveBalance.leave_year == date.today().year).all()
+        
+        filtered_balances = []
+        if employee:
+             for b in balances:
+                 if b.leave_type.gender_eligibility == "All":
+                     filtered_balances.append(b)
+                     continue
+                 if employee.gender and b.leave_type.gender_eligibility.lower() == employee.gender.lower():
+                     filtered_balances.append(b)
+        else:
+            filtered_balances = balances
+
+        total_balance = sum(float(b.available) for b in filtered_balances)
         
         # Pending Docs
         pending_docs = db.query(func.count(EmployeeDocument.id)).filter(
@@ -140,7 +153,7 @@ class DashboardService:
         ).scalar()
 
         # Leaves Used
-        leaves_used = sum(float(b.taken) for b in balances)
+        leaves_used = sum(float(b.taken) for b in filtered_balances)
 
         return [
             DashboardStat(title="Available Balance", value=str(total_balance), description="Total across all types", icon="Calendar", accentColor="bg-blue-500"),
@@ -211,6 +224,8 @@ class DashboardService:
         balances = db.query(LeaveBalance, LeaveType).join(LeaveType, LeaveBalance.leave_type_id == LeaveType.id)\
             .filter(LeaveBalance.employee_id == employee_id, LeaveBalance.leave_year == date.today().year).all()
         
+        employee = db.query(Employee).filter(Employee.id == employee_id).first()
+
         items = []
         colors = {
             "earned_holiday": ("bg-blue-500", "bg-blue-100"),
@@ -220,6 +235,11 @@ class DashboardService:
         }
         
         for bal, lt in balances:
+            # Gender check
+            if lt.gender_eligibility and lt.gender_eligibility != "All":
+                if not employee or not employee.gender or employee.gender.lower() != lt.gender_eligibility.lower():
+                    continue
+
             color_pair = colors.get(lt.name.value, ("bg-primary", "bg-secondary"))
             # Total for the bar is opening_balance + accrued + carry_forward
             total = float(bal.opening_balance + bal.accrued + bal.carry_forward)

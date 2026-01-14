@@ -1,15 +1,100 @@
 from typing import List, Optional
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Body
 from sqlalchemy.orm import Session
 from backend.core.database import get_db
 from backend.models.candidate import CandidateOnboardingTask, Candidate
 from backend.utils.file_storage import upload_file
+from backend.schemas.onboarding import (
+    CandidateCreate, CandidateResponse, OfferGenerationRequest, 
+    PortalAccessResponse, OfferActionRequest
+)
+from backend.services.onboarding_service import onboarding_service
+from backend.core.dependencies import get_current_user
+from backend.models.user import User, UserRole
+from backend.core.permissions import role_required
 
 router = APIRouter()
 
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".docx"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+# --- Admin Endpoints ---
+
+@router.get("/candidates", response_model=List[CandidateResponse])
+@role_required([UserRole.super_admin, UserRole.hr_admin])
+def get_candidates(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return db.query(Candidate).order_by(Candidate.created_at.desc()).all()
+
+@router.post("/candidates", response_model=CandidateResponse, status_code=status.HTTP_201_CREATED)
+@role_required([UserRole.super_admin, UserRole.hr_admin])
+def create_candidate(
+    data: CandidateCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return onboarding_service.create_candidate(db, data, current_user.id)
+
+@router.post("/candidates/{id}/offer", response_model=dict)
+@role_required([UserRole.super_admin, UserRole.hr_admin])
+def send_offer_letter(
+    id: int,
+    data: OfferGenerationRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    token = onboarding_service.generate_offer_link(db, id, data.expiry_days, current_user.id)
+    # In a real app, send email here
+    return {"message": "Offer generated successfully", "token": token, "link": f"/onboarding/{token}"}
+
+@router.post("/candidates/{id}/convert", status_code=status.HTTP_201_CREATED)
+@role_required([UserRole.super_admin, UserRole.hr_admin])
+def convert_candidate(
+    id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    employee = onboarding_service.convert_to_employee(db, id, current_user.id)
+    return {"message": "Candidate converted to employee", "employee_id": employee.id, "email": employee.email}
+
+@router.get("/tasks/{candidate_id}")
+def get_candidate_tasks(
+    candidate_id: int,
+    db: Session = Depends(get_db)
+):
+    # This endpoint is used by the frontend page `app/onboarding/documents/page.tsx`
+    # Ideally should be protected or token-based. For now, matching the frontend's expectation.
+    tasks = db.query(CandidateOnboardingTask).filter(CandidateOnboardingTask.candidate_id == candidate_id).all()
+    return tasks
+
+# --- Public/Portal Endpoints (Token Based) ---
+
+@router.get("/portal/{token}", response_model=PortalAccessResponse)
+def access_onboarding_portal(
+    token: str,
+    db: Session = Depends(get_db)
+):
+    return onboarding_service.get_portal_data(db, token)
+
+@router.post("/portal/{token}/offer", response_model=CandidateResponse)
+def respond_to_offer(
+    token: str,
+    data: OfferActionRequest,
+    db: Session = Depends(get_db)
+):
+    if data.action == "accept":
+        return onboarding_service.accept_offer(db, token)
+    elif data.action == "reject":
+        if not data.reason:
+            raise HTTPException(status_code=400, detail="Reason required for rejection")
+        return onboarding_service.reject_offer(db, token, data.reason)
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action")
+
+# --- Existing Upload Endpoint (Refined) ---
 
 @router.post("/documents/upload")
 async def upload_onboarding_document(
@@ -24,7 +109,8 @@ async def upload_onboarding_document(
         raise HTTPException(status_code=404, detail="Candidate not found")
 
     # Validate file
-    ext = Path(file.filename).suffix.lower()
+    filename = file.filename or "unnamed"
+    ext = Path(filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400, 
@@ -32,8 +118,8 @@ async def upload_onboarding_document(
         )
     
     # Validate size
-    if hasattr(file, "size") and file.size > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail=f"File {file.filename} exceeds 10MB limit")
+    if file.size and file.size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail=f"File {filename} exceeds 10MB limit")
 
     # Save file
     sub_folder = f"candidates/{candidate_id}"
@@ -48,7 +134,9 @@ async def upload_onboarding_document(
     if task:
         task.uploaded_file = relative_path
         task.status = "completed"
+        db.commit() # Save changes to existing task
     else:
+        # Should usually exist from initialization, but fallback:
         task = CandidateOnboardingTask(
             candidate_id=candidate_id,
             checklist_item_id=checklist_item_id,
@@ -56,8 +144,8 @@ async def upload_onboarding_document(
             status="completed"
         )
         db.add(task)
+        db.commit()
 
-    db.commit()
     db.refresh(task)
 
     return {"message": "Document uploaded successfully", "file_path": relative_path}

@@ -231,7 +231,7 @@ def get_pending_approvals(
          raise HTTPException(status_code=400, detail="User is not linked to an employee record")
 
     if current_user.role in ['hr_admin', 'super_admin']:
-        items, total = leave_repository.get_applications(db, skip=skip, limit=limit, status="pending", search=search)
+        items, total = leave_repository.get_applications(db, skip=skip, limit=limit, status="pending", search=search, exclude_employee_id=current_user.employee_id)
     else:
         items, total = leave_repository.get_pending_applications_for_approver(db, current_user.employee_id, skip=skip, limit=limit, search=search)
     

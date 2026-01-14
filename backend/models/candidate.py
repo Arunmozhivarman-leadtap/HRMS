@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Enum, Text, Boolean
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Enum, Text, Boolean, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from backend.core.database import Base
@@ -30,6 +30,13 @@ class Candidate(Base):
     referral_source = Column(String(255))
     referred_by_id = Column(Integer, ForeignKey("employees.id"))
     notes = Column(Text)
+    
+    # Offer Letter & Compensation
+    offer_token = Column(String(255), unique=True, nullable=True)
+    offer_token_expiry = Column(DateTime(timezone=True), nullable=True)
+    ctc = Column(Integer, nullable=True) # Annual CTC
+    salary_structure = Column(JSON, nullable=True) # Breakdown
+    
     status = Column(Enum(CandidateStatus), default=CandidateStatus.created, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -24,8 +24,8 @@ class LeaveService:
             LeaveType(name=LeaveTypeEnum.loss_of_pay, abbr="LOP", annual_entitlement=0, accrual_method="manual", carry_forward=False, negative_balance_allowed=True),
             # Special Leave Types
             LeaveType(name=LeaveTypeEnum.maternity_leave, abbr="ML", annual_entitlement=180, accrual_method="manual", carry_forward=False, requires_approval=True, gender_eligibility="Female", requires_document=True),
-            LeaveType(name=LeaveTypeEnum.paternity_leave, abbr="PL", annual_entitlement=5, accrual_method="manual", carry_forward=False, requires_approval=True, gender_eligibility="Male", requires_document=True),
-            LeaveType(name=LeaveTypeEnum.bereavement_leave, abbr="BL", annual_entitlement=5, accrual_method="manual", carry_forward=False, requires_approval=True, requires_document=True),
+            LeaveType(name=LeaveTypeEnum.paternity_leave, abbr="PL", annual_entitlement=5, accrual_method="manual", carry_forward=False, requires_approval=True, gender_eligibility="Male", requires_document=False),
+            LeaveType(name=LeaveTypeEnum.bereavement_leave, abbr="BL", annual_entitlement=5, accrual_method="manual", carry_forward=False, requires_approval=True, requires_document=False),
             LeaveType(name=LeaveTypeEnum.marriage_leave, abbr="MRL", annual_entitlement=3, accrual_method="manual", carry_forward=False, requires_approval=True, requires_document=True),
             LeaveType(name=LeaveTypeEnum.adoption_leave, abbr="AL", annual_entitlement=84, accrual_method="manual", carry_forward=False, requires_approval=True, requires_document=True),
             LeaveType(name=LeaveTypeEnum.restricted_holiday, abbr="RH", annual_entitlement=2, accrual_method="annual", carry_forward=False, requires_approval=True),
@@ -59,6 +59,12 @@ class LeaveService:
         target_month = 12 if year < current_date.year else current_date.month
         
         for lt in leave_types:
+            # Gender Eligibility Check
+            if lt.gender_eligibility and lt.gender_eligibility != "All":
+                # Ensure employee gender is present and matches
+                if not employee.gender or employee.gender.lower() != lt.gender_eligibility.lower():
+                     continue
+
             # Check if balance record exists
             balance = leave_repository.get_balance(db, employee_id, lt.id, year)
             if not balance:
@@ -479,7 +485,22 @@ class LeaveService:
     def get_employee_balances(self, db: Session, employee_id: int, year: int):
         # Refresh accruals first
         self.calculate_pro_rata_accrual(db, employee_id, year)
-        return leave_repository.get_balances(db, employee_id, year)
+        balances = leave_repository.get_balances(db, employee_id, year)
+        
+        # Filter out ineligible balances (in case they exist from before)
+        employee = db.query(Employee).filter(Employee.id == employee_id).first()
+        if employee:
+             filtered_balances = []
+             for b in balances:
+                 if b.leave_type.gender_eligibility == "All":
+                     filtered_balances.append(b)
+                     continue
+                 
+                 if employee.gender and b.leave_type.gender_eligibility.lower() == employee.gender.lower():
+                     filtered_balances.append(b)
+             return filtered_balances
+             
+        return balances
 
     def get_team_balances(self, db: Session, manager_id: int, year: int, skip: int = 0, limit: int = 10, search: Optional[str] = None):
         employee_ids = leave_repository.get_team_employee_ids(db, manager_id)
