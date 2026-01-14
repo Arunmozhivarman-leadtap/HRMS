@@ -1,24 +1,36 @@
 "use client"
 
 import Link from "next/link"
-import { useAllLeaveApplications, usePendingApprovals } from "@/features/leaves/hooks/use-leaves"
+import { useAllLeaveApplications, usePendingApprovals, usePendingCreditRequests } from "@/features/leaves/hooks/use-leaves"
 import { PendingApprovals } from "@/features/leaves/components/pending-approvals"
+import { CreditApprovals } from "@/features/leaves/components/credit-approvals"
 import { LeaveHistoryTable } from "@/features/leaves/components/leave-history-table"
 import { LeaveUsageChart } from "@/features/leaves/components/leave-usage-chart"
 import { HolidayConfig } from "@/features/leaves/components/holiday-config"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Globe, ShieldCheck } from "lucide-react"
+import { Globe, ShieldCheck, CreditCard } from "lucide-react"
+
+import { usePagination } from "@/hooks/use-pagination"
 
 export default function AdminLeavesPage() {
-    const { data: allApplications, isLoading: isLoadingAllApps } = useAllLeaveApplications()
+    const historyPagination = usePagination(10)
+
+    const { data: allApplications, isLoading: isLoadingAllApps } = useAllLeaveApplications({
+        skip: historyPagination.skip,
+        limit: historyPagination.limit,
+        search: historyPagination.search
+    })
+
     const { data: pendingApprovals } = usePendingApprovals()
+    const { data: pendingCredits } = usePendingCreditRequests()
 
     const stats = [
         {
             title: "Total Applications",
-            value: allApplications?.length || "0",
+            value: allApplications?.total || "0",
             icon: Globe,
             description: "Current year total",
             color: "text-zinc-600",
@@ -26,7 +38,7 @@ export default function AdminLeavesPage() {
         },
         {
             title: "Global Pending",
-            value: pendingApprovals?.length || "0",
+            value: pendingApprovals?.total || "0",
             icon: ShieldCheck,
             description: "Awaiting approval",
             color: "text-amber-600",
@@ -76,36 +88,57 @@ export default function AdminLeavesPage() {
                 ))}
             </div>
 
-            <div className="">
-                <PendingApprovals />
+            <Tabs defaultValue="app-queue" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:w-[600px] mb-8">
+                    <TabsTrigger value="app-queue" className="relative font-bold">
+                        Queue
+                        {pendingApprovals && pendingApprovals.total > 0 && (
+                            <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700 border-none px-1.5 h-4 min-w-4 flex items-center justify-center rounded-full text-[10px] font-bold">
+                                {pendingApprovals.total}
+                            </Badge>
+                        )}
+                    </TabsTrigger>
+                    <TabsTrigger value="credit-requests" className="relative font-bold">
+                        Credits
+                        {pendingCredits && pendingCredits.total > 0 && (
+                            <Badge variant="secondary" className="ml-2 bg-zinc-100 text-zinc-700 border-none px-1.5 h-4 min-w-4 flex items-center justify-center rounded-full text-[10px] font-bold">
+                                {pendingCredits.total}
+                            </Badge>
+                        )}
+                    </TabsTrigger>
+                    <TabsTrigger value="all-history" className="font-bold">History</TabsTrigger>
+                    <TabsTrigger value="holidays" className="font-bold">Holidays</TabsTrigger>
+                </TabsList>
 
-            </div>
+                <TabsContent value="app-queue" className="mt-0">
+                    <PendingApprovals />
+                </TabsContent>
 
-            <Tabs defaultValue="all-history" className="w-full">
-                <div className="flex items-center justify-between mb-4">
-                    <TabsList>
-                        <TabsTrigger value="all-history">All Leave History</TabsTrigger>
-                        <TabsTrigger value="holidays">Organization Holidays</TabsTrigger>
-                    </TabsList>
-                </div>
+                <TabsContent value="credit-requests" className="mt-0">
+                    <CreditApprovals />
+                </TabsContent>
 
                 <TabsContent value="all-history" className="mt-0">
                     <LeaveHistoryTable
-                        applications={allApplications}
+                        data={allApplications?.items || []}
+                        totalCount={allApplications?.total || 0}
+                        pageSize={historyPagination.pageSize}
+                        pageIndex={historyPagination.pageIndex}
+                        onPageChange={historyPagination.onPageChange}
+                        onPageSizeChange={historyPagination.onPageSizeChange}
+                        onSearch={historyPagination.onSearch}
                         isLoading={isLoadingAllApps}
                         variant="admin"
                     />
                 </TabsContent>
 
                 <TabsContent value="holidays" className="mt-0">
-                    <Card className="border-zinc-200">
-                        <CardContent className="p-6">
+                    <Card className="border-border/40 shadow-sm overflow-hidden">
+                        <CardContent className="p-0">
                             <HolidayConfig />
                         </CardContent>
                     </Card>
                 </TabsContent>
-
-
             </Tabs>
         </div>
     )

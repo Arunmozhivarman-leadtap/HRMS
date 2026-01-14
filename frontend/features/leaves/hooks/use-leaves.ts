@@ -12,6 +12,7 @@ import {
     approveLeave,
     rejectLeave,
     getPublicHolidays,
+    getRestrictedHolidays,
     getTeamLeaveBalances,
     getAllLeaveBalances,
     createLeaveType,
@@ -26,7 +27,8 @@ import {
     createHoliday,
     updateHoliday,
     deleteHoliday,
-    getLeaveAnalytics
+    getLeaveAnalytics,
+    recallLeave
 } from "../api";
 import { LeaveApplicationCreate, LeaveType, LeaveCreditRequestCreate, PublicHoliday } from "@/types/leave";
 import { useToast } from "@/hooks/use-toast";
@@ -45,17 +47,17 @@ export const useMyLeaveBalances = (year?: number) => {
     });
 };
 
-export const useMyLeaveApplications = (year?: number) => {
+export const useMyLeaveApplications = (params: { skip?: number, limit?: number, year?: number } = {}) => {
     return useQuery({
-        queryKey: ["my-leave-applications", year],
-        queryFn: () => getMyLeaveApplications(year),
+        queryKey: ["my-leave-applications", params],
+        queryFn: () => getMyLeaveApplications(params),
     });
 };
 
-export const usePendingApprovals = () => {
+export const usePendingApprovals = (params: { skip?: number, limit?: number, search?: string } = {}) => {
     return useQuery({
-        queryKey: ["pending-approvals"],
-        queryFn: getPendingApprovals,
+        queryKey: ["pending-approvals", params],
+        queryFn: () => getPendingApprovals(params),
     });
 };
 
@@ -66,31 +68,38 @@ export const usePublicHolidays = (year?: number) => {
     });
 };
 
-export const useTeamLeaveBalances = (year?: number) => {
+export const useRestrictedHolidays = (year?: number) => {
+    return useQuery<PublicHoliday[]>({
+        queryKey: ['restricted-holidays', year],
+        queryFn: () => getRestrictedHolidays(year),
+    })
+};
+
+export const useTeamLeaveBalances = (params: { skip?: number, limit?: number, search?: string, year?: number } = {}) => {
     return useQuery({
-        queryKey: ["team-leave-balances", year],
-        queryFn: () => getTeamLeaveBalances(year),
+        queryKey: ["team-leave-balances", params],
+        queryFn: () => getTeamLeaveBalances(params),
     });
 };
 
-export const useAllLeaveBalances = (year?: number) => {
+export const useAllLeaveBalances = (params: { skip?: number, limit?: number, search?: string, year?: number } = {}) => {
     return useQuery({
-        queryKey: ["all-leave-balances", year],
-        queryFn: () => getAllLeaveBalances(year),
+        queryKey: ["all-leave-balances", params],
+        queryFn: () => getAllLeaveBalances(params),
     });
 };
 
-export const useTeamLeaveApplications = (year?: number) => {
+export const useTeamLeaveApplications = (params: { skip?: number, limit?: number, search?: string, year?: number } = {}) => {
     return useQuery({
-        queryKey: ["team-leave-applications", year],
-        queryFn: () => getTeamLeaveApplications(year),
+        queryKey: ["team-leave-applications", params],
+        queryFn: () => getTeamLeaveApplications(params),
     });
 };
 
-export const useAllLeaveApplications = (year?: number) => {
+export const useAllLeaveApplications = (params: { skip?: number, limit?: number, search?: string, year?: number } = {}) => {
     return useQuery({
-        queryKey: ["all-leave-applications", year],
-        queryFn: () => getAllLeaveApplications(year),
+        queryKey: ["all-leave-applications", params],
+        queryFn: () => getAllLeaveApplications(params),
     });
 };
 
@@ -305,17 +314,17 @@ export const useRequestLeaveCredit = () => {
     });
 };
 
-export const useMyCreditRequests = () => {
+export const useMyCreditRequests = (params: { skip?: number, limit?: number } = {}) => {
     return useQuery({
-        queryKey: ["my-credit-requests"],
-        queryFn: getMyCreditRequests,
+        queryKey: ["my-credit-requests", params],
+        queryFn: () => getMyCreditRequests(params),
     });
 };
 
-export const usePendingCreditRequests = () => {
+export const usePendingCreditRequests = (params: { skip?: number, limit?: number, search?: string } = {}) => {
     return useQuery({
-        queryKey: ["pending-credit-requests"],
-        queryFn: getPendingCreditRequests,
+        queryKey: ["pending-credit-requests", params],
+        queryFn: () => getPendingCreditRequests(params),
     });
 };
 
@@ -413,3 +422,34 @@ export const useDeleteHoliday = () => {
         },
     });
 };
+
+export const useRecallLeave = () => {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    return useMutation({
+        mutationFn: ({ id, recallDate, reason }: { id: number, recallDate: string, reason: string }) =>
+            recallLeave(id, recallDate, reason),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["my-leave-applications"] });
+            queryClient.invalidateQueries({ queryKey: ["team-leave-applications"] });
+            queryClient.invalidateQueries({ queryKey: ["all-leave-applications"] });
+            queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+            queryClient.invalidateQueries({ queryKey: ["team-leave-balances"] });
+            queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+            toast({
+                title: "Employee Recalled",
+                description: "The leave has been updated and unused days credited back.",
+                variant: "success",
+            });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Recall Failed",
+                description: error.message || "Failed to recall employee from leave.",
+                variant: "destructive",
+            });
+        },
+    });
+};
+

@@ -115,7 +115,7 @@ export const HolidayConfig = () => {
         const styles = {
             [HolidayType.national]: "bg-emerald-50 text-emerald-700 border-emerald-100",
             [HolidayType.festival]: "bg-amber-50 text-amber-700 border-amber-100",
-            [HolidayType.state]: "bg-blue-50 text-blue-700 border-blue-100",
+            [HolidayType.state]: "bg-zinc-100 text-zinc-700 border-zinc-200",
             [HolidayType.declared]: "bg-zinc-50 text-zinc-700 border-zinc-100",
         }
         return (

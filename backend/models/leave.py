@@ -23,6 +23,7 @@ class LeaveApplicationStatus(str, enum.Enum):
     approved = 'approved'
     rejected = 'rejected'
     cancelled = 'cancelled'
+    recalled = 'recalled'
 
 class HolidayType(str, enum.Enum):
     national = 'national'

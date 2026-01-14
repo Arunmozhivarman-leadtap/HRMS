@@ -1,57 +1,64 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { format, parseISO } from "date-fns";
 
-export function LeaveBalanceWidget() {
-  const leaves = [
-    { type: "Earned Leave", balance: 12.5, total: 15, color: "bg-red-500", bg: "bg-red-100" },
-    { type: "Casual Leave", balance: 8, total: 12, color: "bg-orange-400", bg: "bg-orange-100" },
-    { type: "Sick Leave", balance: 10, total: 12, color: "bg-slate-500", bg: "bg-slate-100" },
-  ];
+interface LeaveBalanceWidgetProps {
+  balances: Array<{
+    type: string;
+    balance: number;
+    total: number;
+    color: string;
+    bg: string;
+  }>;
+  upcomingLeave?: {
+    type: string;
+    start_date: string;
+    days: number;
+    status: string;
+  };
+  onApplyLeave?: () => void;
+}
 
+export function LeaveBalanceWidget({ balances, upcomingLeave }: LeaveBalanceWidgetProps) {
   return (
-    <Card className="bg-background border shadow-sm h-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-6 border-b border-border/40">
-        <CardTitle className="text-xl font-serif font-medium text-foreground">Leave Balance</CardTitle>
-        <Button variant="outline" size="sm" className="h-8 text-xs hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors">
-            + Apply Leave
-        </Button>
+    <Card className="bg-background border shadow-sm">
+      <CardHeader className="pb-4 pt-4 border-b border-border/40">
+        <CardTitle className="text-lg font-serif font-medium text-foreground">Leave Balances</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-8 pt-6">
-        <div className="space-y-6">
-            {leaves.map((leave) => (
-            <div key={leave.type} className="space-y-3">
-                <div className="flex items-end justify-between text-sm">
-                <span className="font-medium text-foreground/90">{leave.type}</span>
-                <span className="text-muted-foreground text-xs">
-                    <span className="font-semibold text-foreground text-sm">{leave.balance}</span> / {leave.total} days
-                </span>
-                </div>
-                <div className={`h-2.5 w-full overflow-hidden rounded-full ${leave.bg}`}>
-                <div
-                    className={`h-full ${leave.color} rounded-full transition-all duration-1000 ease-out`}
-                    style={{ width: `${(leave.balance / leave.total) * 100}%` }}
-                />
-                </div>
+      <CardContent className="pt-6">
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {balances.map((leave) => (
+            <div key={leave.type} className="p-4 rounded-xl border bg-muted/30 hover:bg-muted/50 transition-colors group">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-1">{leave.type}</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-serif font-bold text-foreground">{leave.balance}</span>
+                <span className="text-xs text-muted-foreground">/ {leave.total}</span>
+              </div>
             </div>
-            ))}
+          ))}
         </div>
-        
-        <div className="rounded-lg bg-zinc-50 border border-zinc-100 p-4 flex items-center gap-4">
-             <div className="flex-shrink-0 flex flex-col items-center justify-center w-12 h-12 bg-white border shadow-sm rounded-md">
-                 <span className="text-[9px] uppercase font-bold text-red-500 tracking-wider">Jan</span>
-                 <span className="text-lg font-serif font-bold text-foreground leading-none">15</span>
-             </div>
-             <div className="flex-1 min-w-0">
-                 <p className="text-sm font-medium text-foreground truncate">Upcoming: Earned Leave</p>
-                 <div className="flex items-center gap-2 mt-1">
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">
-                        Approved
-                    </span>
-                    <span className="text-xs text-muted-foreground">3 days</span>
-                 </div>
-             </div>
-             <Button variant="ghost" size="sm" className="text-xs h-8">View</Button>
-        </div>
+
+        {upcomingLeave && (
+          <div className="rounded-lg bg-zinc-50 border border-zinc-100 p-3 flex items-center gap-4">
+            <div className="flex-shrink-0 flex flex-col items-center justify-center w-10 h-10 bg-white border shadow-sm rounded-md">
+              <span className="text-[8px] uppercase font-bold text-red-500 tracking-wider">
+                {format(parseISO(upcomingLeave.start_date), "MMM")}
+              </span>
+              <span className="text-base font-serif font-bold text-foreground leading-none">
+                {format(parseISO(upcomingLeave.start_date), "dd")}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">Upcoming: {upcomingLeave.type}</p>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-medium bg-green-100 text-green-700">
+                  {upcomingLeave.status}
+                </span>
+                <span className="text-[10px] text-muted-foreground">{upcomingLeave.days} days</span>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

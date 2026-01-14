@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import date
@@ -11,6 +11,7 @@ from backend.models.document import DocumentType, EmployeeDocument, DocumentVeri
 from backend.schemas.document import DocumentResponse, DocumentUpdate
 from backend.schemas.document_verification import DocumentVerificationUpdate
 from backend.models.employee import Employee
+from backend.schemas.api import PaginatedResponse
 
 from backend.repositories.document_repository import document_repository
 from backend.utils.file_storage import upload_file, get_file_stream, get_file_path, delete_file
@@ -108,29 +109,26 @@ async def upload_documents(
 
     return responses
 
-@router.get("/list", response_model=List[DocumentResponse])
+@router.get("/list", response_model=PaginatedResponse[DocumentResponse])
 async def get_documents(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
+    search: Optional[str] = None,
     employee_id: Optional[int] = None,
     document_type: Optional[DocumentType] = None,
     verification_status: Optional[DocumentVerificationStatus] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    query = db.query(EmployeeDocument)
+    query = db.query(EmployeeDocument).join(Employee, EmployeeDocument.employee_id == Employee.id)
 
     # Role Scoping
     if current_user.role == UserRole.employee:
-        # Employee can only see their own documents
         query = query.filter(EmployeeDocument.employee_id == current_user.employee_id)
-    
     elif current_user.role == UserRole.manager:
-        # Manager: Own documents + Team's VERIFIED documents
-        # Get team members
         team_members = db.query(Employee.id).filter(Employee.manager_id == current_user.employee_id).all()
         team_ids = [t[0] for t in team_members]
-        
         if employee_id:
-            # If specific employee requested
             if employee_id == current_user.employee_id:
                 query = query.filter(EmployeeDocument.employee_id == employee_id)
             elif employee_id in team_ids:
@@ -141,11 +139,6 @@ async def get_documents(
             else:
                 raise HTTPException(status_code=403, detail="Not authorized to view this employee's documents")
         else:
-            # List all allowed: Own + Team (Verified only)
-            # This requires a complex OR condition or union. simpler to just return own here if filtered by nothing?
-            # Usually the UI requests specific employee or "My Documents".
-            # But the "Team Documents" view might want all.
-            # Let's use an OR condition: (id=self) OR (id IN team AND status=verified)
             from sqlalchemy import or_, and_
             query = query.filter(
                 or_(
@@ -156,19 +149,32 @@ async def get_documents(
                     )
                 )
             )
-
     else: # HR/Admin
         if employee_id:
             query = query.filter(EmployeeDocument.employee_id == employee_id)
+
+    if search:
+        from sqlalchemy import or_
+        query = query.filter(or_(
+            Employee.first_name.ilike(f"%{search}%"),
+            Employee.last_name.ilike(f"%{search}%")
+        ))
     
-    # Common filters
     if document_type:
         query = query.filter(EmployeeDocument.document_type == document_type)
-    
     if verification_status:
         query = query.filter(EmployeeDocument.verification_status == verification_status)
         
-    return query.all()
+    total = query.count()
+    items = query.order_by(EmployeeDocument.created_at.desc()).offset(skip).limit(limit).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1,
+        "size": limit,
+        "pages": (total + limit - 1) // limit if total > 0 else 0
+    }
 
 @router.get("/{id}/download")
 async def download_document(

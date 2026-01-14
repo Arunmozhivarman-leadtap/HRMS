@@ -16,10 +16,9 @@ interface ReportsDashboardProps {
         liability: { total_el_days: number, total_lop_days: number }
         top_absentees: { name: string; days: number }[]
     }
-    balanceData: LeaveBalance[]
 }
 
-export function ReportsDashboard({ analyticsData, balanceData }: ReportsDashboardProps) {
+export function ReportsDashboard({ analyticsData }: ReportsDashboardProps) {
     return (
         <div className="space-y-8">
             {/* Top Cards Section - Summary Stats */}
@@ -49,7 +48,7 @@ export function ReportsDashboard({ analyticsData, balanceData }: ReportsDashboar
                     </TabsContent>
 
                     <TabsContent value="balances" className="mt-0">
-                        <BalanceReportTable data={balanceData} />
+                        <BalanceReportTable />
                     </TabsContent>
                 </Tabs>
             </div>

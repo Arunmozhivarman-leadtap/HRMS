@@ -1,14 +1,6 @@
 "use client";
 
 import { useMasterData, useCreateMasterData } from "@/hooks/use-settings";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +26,9 @@ import {
   FormMessage
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { DataTable } from "../shared/data-table";
+import { ColumnDef } from "@tanstack/react-table";
+import { usePagination } from "@/hooks/use-pagination";
 
 interface MasterDataTableProps {
   type: string;
@@ -52,7 +47,18 @@ const masterSchema = z.object({
 });
 
 export function MasterDataTable({ type, title, description, fields }: MasterDataTableProps) {
-  const { data, isLoading } = useMasterData(type);
+  const {
+    pageIndex,
+    pageSize,
+    search,
+    skip,
+    limit,
+    onPageChange,
+    onPageSizeChange,
+    onSearch
+  } = usePagination(10);
+
+  const { data, isLoading } = useMasterData(type, { skip, limit, search });
   const createMutation = useCreateMasterData(type);
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
@@ -71,6 +77,34 @@ export function MasterDataTable({ type, title, description, fields }: MasterData
       }
     });
   };
+
+  const columns: ColumnDef<any>[] = [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => (
+        <span className="font-medium text-sm text-foreground">{row.original.name}</span>
+      ),
+    },
+    ...fields.filter(f => f.name !== "name").map(f => ({
+      accessorKey: f.name,
+      header: f.label,
+      cell: ({ row }: { row: any }) => (
+        <span className="text-xs font-medium text-muted-foreground">{row.original[f.name] || "---"}</span>
+      ),
+    })),
+    {
+      id: "actions",
+      header: () => <div className="text-right">Actions</div>,
+      cell: () => (
+        <div className="text-right">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors rounded-full">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <Card className="border shadow-sm rounded-xl overflow-hidden bg-white">
@@ -114,39 +148,20 @@ export function MasterDataTable({ type, title, description, fields }: MasterData
           </DialogContent>
         </Dialog>
       </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader className="bg-muted/90 backdrop-blur-sm text-muted-foreground [&_th]:font-medium [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider shadow-sm border-b">
-            <TableRow className="border-b border-border/40 hover:bg-transparent">
-              <TableHead className="py-4 px-6 align-middle">Name</TableHead>
-              {fields.filter(f => f.name !== "name").map(f => (
-                <TableHead key={f.name} className="py-4 px-6 align-middle">{f.label}</TableHead>
-              ))}
-              <TableHead className="text-right py-4 px-6 align-middle">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="divide-y divide-border/40">
-            {isLoading ? (
-              <TableRow><TableCell colSpan={fields.length + 1} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
-            ) : data?.length === 0 ? (
-              <TableRow><TableCell colSpan={fields.length + 1} className="h-40 text-center text-muted-foreground font-bold uppercase tracking-widest text-[10px]">No entries found.</TableCell></TableRow>
-            ) : (
-              data?.map((item: any) => (
-                <TableRow key={item.id} className="hover:bg-muted/30 transition-colors border-none group">
-                  <TableCell className="py-4 px-6 align-middle font-medium text-sm text-foreground">{item.name}</TableCell>
-                  {fields.filter(f => f.name !== "name").map(f => (
-                    <TableCell key={f.name} className="py-4 px-6 align-middle text-xs font-medium text-muted-foreground">{item[f.name] || "---"}</TableCell>
-                  ))}
-                  <TableCell className="text-right py-4 px-6 align-middle">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 rounded-full">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+      <CardContent className="p-4 pt-0">
+        <DataTable
+          columns={columns}
+          data={data?.items || []}
+          totalCount={data?.total || 0}
+          pageSize={pageSize}
+          pageIndex={pageIndex}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          onSearch={onSearch}
+          searchPlaceholder={`Search ${title.toLowerCase()}...`}
+          isLoading={isLoading}
+          hasBorder={false}
+        />
       </CardContent>
     </Card>
   );

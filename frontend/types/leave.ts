@@ -16,7 +16,8 @@ export enum LeaveApplicationStatus {
     pending = 'pending',
     approved = 'approved',
     rejected = 'rejected',
-    cancelled = 'cancelled'
+    cancelled = 'cancelled',
+    recalled = 'recalled'
 }
 
 export enum HolidayType {
@@ -133,6 +134,8 @@ export interface LeaveCreditRequest {
     approver_id?: number;
     approved_date?: string;
     created_at: string;
+    employee_name?: string;
+    leave_type_name?: string;
 }
 
 export interface LeaveCreditRequestCreate {

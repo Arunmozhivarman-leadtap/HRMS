@@ -8,9 +8,21 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Search, Users } from "lucide-react";
 
+import { usePagination } from "@/hooks/use-pagination";
+
 export default function ManagerTeamPage() {
-  const [search, setSearch] = useState("");
-  const { data, isLoading } = useEmployees({ search });
+  const {
+    pageIndex,
+    pageSize,
+    search,
+    skip,
+    limit,
+    onPageChange,
+    onPageSizeChange,
+    onSearch
+  } = usePagination(10);
+
+  const { data, isLoading } = useEmployees({ skip, limit, search });
 
   return (
     <div className="space-y-8">
@@ -28,8 +40,8 @@ export default function ManagerTeamPage() {
             <Input
               placeholder="Search team members by name or code..."
               className="pl-10 h-11 bg-background border-border/60 focus:ring-primary/20 transition-all text-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              defaultValue={search}
+              onChange={(e) => onSearch(e.target.value)}
             />
           </div>
         </div>
@@ -44,7 +56,16 @@ export default function ManagerTeamPage() {
         ) : (
           <div className="space-y-8">
             <TeamSummaryCards employees={data?.items || []} />
-            <TeamEmployeeTable employees={data?.items || []} />
+            <TeamEmployeeTable
+              employees={data?.items || []}
+              totalCount={data?.total || 0}
+              pageSize={pageSize}
+              pageIndex={pageIndex}
+              onPageChange={onPageChange}
+              onPageSizeChange={onPageSizeChange}
+              onSearch={onSearch}
+              isLoading={isLoading}
+            />
           </div>
         )}
       </div>

@@ -1,14 +1,6 @@
 "use client";
 
 import { Employee } from "@/types/employee";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +10,6 @@ import {
   FileText,
   MoreVertical,
   RotateCcw,
-  Users
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -31,16 +22,32 @@ import {
 import { useArchiveEmployee, useRestoreEmployee } from "@/hooks/use-employee";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Card } from "../ui/card";
 import { format } from "date-fns";
 import { getPhotoUrl } from "@/lib/utils";
+import { DataTable } from "../shared/data-table";
+import { ColumnDef } from "@tanstack/react-table";
 
 interface AdminEmployeeTableProps {
   employees: Employee[];
+  totalCount: number;
+  pageSize: number;
+  pageIndex: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  onSearch: (value: string) => void;
   isArchivedView?: boolean;
 }
 
-export function AdminEmployeeTable({ employees, isArchivedView = false }: AdminEmployeeTableProps) {
+export function AdminEmployeeTable({
+  employees,
+  totalCount,
+  pageSize,
+  pageIndex,
+  onPageChange,
+  onPageSizeChange,
+  onSearch,
+  isArchivedView = false
+}: AdminEmployeeTableProps) {
   const { toast } = useToast();
   const archiveMutation = useArchiveEmployee();
   const restoreMutation = useRestoreEmployee();
@@ -71,125 +78,143 @@ export function AdminEmployeeTable({ employees, isArchivedView = false }: AdminE
     }
   };
 
+  const columns: ColumnDef<Employee>[] = [
+    {
+      accessorKey: "profile_photo",
+      header: "Photo",
+      cell: ({ row }) => (
+        <Avatar className="h-10 w-10 border border-border shadow-sm rounded-lg overflow-hidden">
+          <AvatarImage
+            src={getPhotoUrl(row.original.profile_photo)}
+            className="object-cover"
+          />
+          <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+            {row.original.first_name[0]}{row.original.last_name[0]}
+          </AvatarFallback>
+        </Avatar>
+      ),
+    },
+    {
+      accessorKey: "full_name",
+      header: "Employee Details",
+      cell: ({ row }) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">
+            {row.original.full_name}
+          </span>
+          <span className="text-xs text-muted-foreground font-medium">{row.original.email}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "organization",
+      header: "Organization",
+      cell: ({ row }) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs font-mono font-medium text-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/40 w-fit">
+            {row.original.employee_code || "---"}
+          </span>
+          <span className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/80">
+            {row.original.employment_type}
+          </span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "role",
+      header: "Role",
+      cell: ({ row }) => (
+        <Badge variant="outline" className="capitalize font-bold text-[10px] px-2.5 py-0.5 border-border bg-white shadow-none text-muted-foreground">
+          {row.original.role.replace("_", " ")}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: isArchivedView ? "archived_at" : "employment_status",
+      header: isArchivedView ? "Archived Date" : "Status",
+      cell: ({ row }) => {
+        const emp = row.original;
+        return isArchivedView ? (
+          <div className="text-xs font-medium text-amber-700">
+            {emp.archived_at ? format(new Date(emp.archived_at), "PPP") : "N/A"}
+          </div>
+        ) : (
+          <Badge
+            variant={emp.employment_status === "active" ? "default" : "secondary"}
+            className={emp.employment_status === "active" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-none shadow-none capitalize font-bold text-[10px]" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 border-none shadow-none capitalize font-bold text-[10px]"}
+          >
+            {emp.employment_status}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => {
+        const emp = row.original;
+        return (
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52 p-1.5 rounded-xl shadow-xl border-border/60">
+                <DropdownMenuLabel className="text-xs font-bold text-muted-foreground px-3 py-2">Employee Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={`/dashboard/employees/${emp.id}`} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg hover:bg-primary/5 group/item">
+                    <Eye className="h-4 w-4 text-muted-foreground group-hover/item:text-primary transition-colors" />
+                    <span className="text-sm font-medium">View Full Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/dashboard/employees/${emp.id}?tab=documents`} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg hover:bg-primary/5 group/item">
+                    <FileText className="h-4 w-4 text-muted-foreground group-hover/item:text-primary transition-colors" />
+                    <span className="text-sm font-medium">Manage Documents</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {isArchivedView ? (
+                  <DropdownMenuItem
+                    onClick={() => handleRestore(emp.id, emp.full_name)}
+                    className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg text-emerald-600 hover:bg-emerald-50 focus:bg-emerald-50 focus:text-emerald-700 active:bg-emerald-100 group/item"
+                  >
+                    <RotateCcw className="h-4 w-4 group-hover/item:scale-110 transition-transform" />
+                    <span className="text-sm font-bold">Restore Employee</span>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => handleArchive(emp.id, emp.full_name)}
+                    className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-lg text-amber-600 hover:bg-amber-50 focus:bg-amber-50 focus:text-amber-700 active:bg-amber-100 group/item"
+                  >
+                    <Archive className="h-4 w-4 group-hover/item:scale-110 transition-transform" />
+                    <span className="text-sm font-bold">Archive Profile</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
-    <Card className="bg-background border shadow-sm flex flex-col min-h-[400px] overflow-hidden rounded-xl">
-      <div className="overflow-auto max-h-[600px] flex-1">
-        <Table>
-          <TableHeader className="bg-muted/90 backdrop-blur-sm text-muted-foreground [&_th]:font-medium [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider sticky top-0 z-10 shadow-sm border-b">
-            <TableRow className="border-b border-border/40 hover:bg-transparent">
-              <TableHead className="w-[80px] py-4 px-6 align-middle">Photo</TableHead>
-              <TableHead className="py-4 px-6 align-middle">Employee Details</TableHead>
-              <TableHead className="py-4 px-6 align-middle">Organization</TableHead>
-              <TableHead className="py-4 px-6 align-middle">Role</TableHead>
-              <TableHead className="py-4 px-6 align-middle">{isArchivedView ? "Archived Date" : "Status"}</TableHead>
-              <TableHead className="text-right py-4 px-6 align-middle">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="divide-y divide-border/40">
-            {employees.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-60 text-center text-muted-foreground">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="p-4 rounded-full bg-muted/50">
-                      <Users className="h-8 w-8 opacity-20" />
-                    </div>
-                    <div>
-                      <p className="font-serif text-lg font-medium text-foreground">No employees found</p>
-                      <p className="text-sm">Adjust filters or search to view results.</p>
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              employees.map((emp) => (
-                <TableRow key={emp.id} className="hover:bg-muted/30 transition-colors border-none group">
-                  <TableCell className="py-4 px-6 align-middle">
-                    <Avatar className="h-10 w-10 border border-border shadow-sm rounded-lg overflow-hidden">
-                      <AvatarImage
-                        src={getPhotoUrl(emp.profile_photo)}
-                        className="object-cover"
-                      />
-                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{emp.first_name[0]}{emp.last_name[0]}</AvatarFallback>
-                    </Avatar>
-                  </TableCell>
-                  <TableCell className="py-4 px-6 align-middle">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">{emp.full_name}</span>
-                      <span className="text-xs text-muted-foreground font-medium">{emp.email}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-4 px-6 align-middle">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-mono font-medium text-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/40 w-fit">{emp.employee_code || "---"}</span>
-                      <span className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/80">{emp.employment_type}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-4 px-6 align-middle">
-                    <Badge variant="outline" className="capitalize font-bold text-[10px] px-2.5 py-0.5 border-border bg-white shadow-none text-muted-foreground">
-                      {emp.role.replace("_", " ")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-4 px-6 align-middle">
-                    {isArchivedView ? (
-                      <div className="text-xs font-medium text-amber-700">
-                        {emp.archived_at ? format(new Date(emp.archived_at), "PPP") : "N/A"}
-                      </div>
-                    ) : (
-                      <Badge variant={emp.employment_status === "active" ? "default" : "secondary"} className={emp.employment_status === "active" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-none shadow-none capitalize font-bold text-[10px]" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 border-none shadow-none capitalize font-bold text-[10px]"}>
-                        {emp.employment_status}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right py-4 px-6 align-middle">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-52 p-1.5 rounded-xl shadow-xl border-border/60">
-                        <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-3 py-2">Account Actions</DropdownMenuLabel>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/employees/${emp.id}`} className="flex items-center cursor-pointer rounded-lg py-2">
-                            <Eye className="mr-3 h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium text-sm">View Profile</span>
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/documents/admin?employee_id=${emp.id}`} className="flex items-center cursor-pointer rounded-lg py-2">
-                            <FileText className="mr-3 h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium text-sm">Documents</span>
-                          </Link>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator className="my-1.5" />
-
-                        {isArchivedView ? (
-                          <DropdownMenuItem
-                            className="text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer rounded-lg py-2"
-                            onClick={() => handleRestore(emp.id, emp.full_name)}
-                          >
-                            <RotateCcw className="mr-3 h-4 w-4" />
-                            <span className="font-medium text-sm">Restore Employee</span>
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            className="text-rose-600 focus:text-rose-700 focus:bg-rose-50 cursor-pointer rounded-lg py-2"
-                            onClick={() => handleArchive(emp.id, emp.full_name)}
-                          >
-                            <Archive className="mr-3 h-4 w-4" />
-                            <span className="font-medium text-sm">Archive Account</span>
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </Card>
+    <DataTable
+      columns={columns}
+      data={employees}
+      totalCount={totalCount}
+      pageSize={pageSize}
+      pageIndex={pageIndex}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      onSearch={onSearch}
+      searchPlaceholder="Search employees..."
+      showSearch={false}
+      isLoading={archiveMutation.isPending || restoreMutation.isPending}
+    />
   );
 }

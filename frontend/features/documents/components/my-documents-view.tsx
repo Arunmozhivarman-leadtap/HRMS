@@ -107,11 +107,13 @@ export function MyDocumentsView() {
     const [uploadingType, setUploadingType] = useState<string | null>(null)
     const [expiryDates, setExpiryDates] = useState<Record<string, string>>({})
 
-    const { data: documents, isLoading } = useQuery<DocumentResponse[]>({
+    const { data: documentsResponse, isLoading } = useQuery<any>({
         queryKey: ["my-documents", user?.employee_id],
-        queryFn: () => fetcher(`/documents/list${user?.employee_id ? `?employee_id=${user.employee_id}` : ''}`),
+        queryFn: () => fetcher(`/documents/list?limit=100${user?.employee_id ? `&employee_id=${user.employee_id}` : ''}`),
         enabled: !!user?.employee_id
     })
+
+    const documents = documentsResponse?.items || []
 
     const uploadMutation = useMutation({
         mutationFn: async ({ type, file, expiry }: { type: string, file: File, expiry?: string }) => {
@@ -209,7 +211,7 @@ export function MyDocumentsView() {
 
                             <div className="grid gap-6">
                                 {category.items.map((item) => {
-                                    const matchingDocs = documents?.filter(d => d.document_type === item.type) || []
+                                    const matchingDocs = documents?.filter((d: DocumentResponse) => d.document_type === item.type) || []
                                     const hasDocs = matchingDocs.length > 0
                                     const isItemUploading = uploadingType === item.type
 
@@ -288,7 +290,7 @@ export function MyDocumentsView() {
 
                                                         {hasDocs && (
                                                             <div className="space-y-1">
-                                                                {matchingDocs.map((doc) => (
+                                                                {matchingDocs.map((doc: DocumentResponse) => (
                                                                     <div key={doc.id} className="group relative flex flex-col py-3 border-b border-border/40 last:border-0 transition-all">
                                                                         <div className="flex items-center justify-between">
                                                                             <div className="flex items-center gap-3 justify-end flex-1 min-w-0">

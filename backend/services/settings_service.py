@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Tuple
 from backend.models.settings import CompanySettings, EmploymentType
 from backend.models.department import Department
 from backend.models.master_data import Designation
@@ -50,8 +50,15 @@ class SettingsService:
         log_action(db, user_id, "CREATE", model.__name__, db_obj.id, details=obj_in.model_dump(), ip_address=ip_address)
         return db_obj
 
-    def _get_masters(self, db: Session, model: Any):
-        return db.query(model).all()
+    def _get_masters(self, db: Session, model: Any, skip: int = 0, limit: int = 10, search: Optional[str] = None):
+        query = db.query(model)
+        if search:
+            if hasattr(model, 'name'):
+                query = query.filter(model.name.ilike(f"%{search}%"))
+        
+        total = query.count()
+        items = query.order_by(model.id).offset(skip).limit(limit).all()
+        return items, total
 
     def _delete_master(self, db: Session, model: Any, obj_id: int, user_id: int, ip_address: str):
         db_obj = db.query(model).get(obj_id)
@@ -66,19 +73,19 @@ class SettingsService:
     def create_department(self, db: Session, obj_in: DepartmentCreate, user_id: int, ip_address: str):
         return self._create_master(db, Department, obj_in, user_id, ip_address)
     
-    def get_departments(self, db: Session):
-        return self._get_masters(db, Department)
+    def get_departments(self, db: Session, skip: int = 0, limit: int = 10, search: Optional[str] = None):
+        return self._get_masters(db, Department, skip, limit, search)
 
     def create_designation(self, db: Session, obj_in: DesignationCreate, user_id: int, ip_address: str):
         return self._create_master(db, Designation, obj_in, user_id, ip_address)
     
-    def get_designations(self, db: Session):
-        return self._get_masters(db, Designation)
+    def get_designations(self, db: Session, skip: int = 0, limit: int = 10, search: Optional[str] = None):
+        return self._get_masters(db, Designation, skip, limit, search)
 
     def create_employment_type(self, db: Session, obj_in: EmploymentTypeCreate, user_id: int, ip_address: str):
         return self._create_master(db, EmploymentType, obj_in, user_id, ip_address)
     
-    def get_employment_types(self, db: Session):
-        return self._get_masters(db, EmploymentType)
+    def get_employment_types(self, db: Session, skip: int = 0, limit: int = 10, search: Optional[str] = None):
+        return self._get_masters(db, EmploymentType, skip, limit, search)
 
 settings_service = SettingsService()

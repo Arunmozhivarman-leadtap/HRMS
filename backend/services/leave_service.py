@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from fastapi import HTTPException, status, UploadFile
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -119,10 +119,11 @@ class LeaveService:
         if not to_date:
             to_date = from_date
 
-        # Fetch holidays in range
+        # Fetch non-restricted holidays in range (Regular holidays)
         holidays = db.query(PublicHoliday.holiday_date).filter(
             PublicHoliday.holiday_date >= from_date,
-            PublicHoliday.holiday_date <= to_date
+            PublicHoliday.holiday_date <= to_date,
+            PublicHoliday.is_restricted == False
         ).all()
         holiday_dates = {h.holiday_date for h in holidays}
 
@@ -156,6 +157,32 @@ class LeaveService:
         leave_type = leave_repository.get_leave_type(db, application_data.leave_type_id)
         if not leave_type:
              raise HTTPException(status_code=404, detail="Leave type not found")
+
+        # Restricted Holiday Specific Validations
+        if leave_type.name == LeaveTypeEnum.restricted_holiday:
+            # 1. Ensure date is a configured Restricted Holiday
+            rh_holiday = db.query(PublicHoliday).filter(
+                PublicHoliday.holiday_date == application_data.from_date,
+                PublicHoliday.is_restricted == True
+            ).first()
+            
+            if not rh_holiday:
+                raise HTTPException(status_code=400, detail=f"The selected date {application_data.from_date} is not a configured Restricted Holiday.")
+            
+            # 2. Ensure and multi-day RH is not allowed (usually single day)
+            if application_data.to_date and application_data.to_date != application_data.from_date:
+                raise HTTPException(status_code=400, detail="Restricted Holidays can only be applied for a single day.")
+
+            # 3. Check if employee already applied for THIS specific RH date
+            already_applied = db.query(LeaveApplication).filter(
+                LeaveApplication.employee_id == employee_id,
+                LeaveApplication.leave_type_id == application_data.leave_type_id,
+                LeaveApplication.from_date == application_data.from_date,
+                LeaveApplication.status.in_([LeaveApplicationStatus.pending, LeaveApplicationStatus.approved])
+            ).first()
+            
+            if already_applied:
+                raise HTTPException(status_code=400, detail=f"You have already applied for the Restricted Holiday on {application_data.from_date}.")
 
         # 1.1 Overlap Check
         # Check if there are any pending or approved leaves that overlap with the requested dates
@@ -454,23 +481,51 @@ class LeaveService:
         self.calculate_pro_rata_accrual(db, employee_id, year)
         return leave_repository.get_balances(db, employee_id, year)
 
-    def get_team_balances(self, db: Session, manager_id: int, year: int):
+    def get_team_balances(self, db: Session, manager_id: int, year: int, skip: int = 0, limit: int = 10, search: Optional[str] = None):
         employee_ids = leave_repository.get_team_employee_ids(db, manager_id)
         # Ensure all are refreshed
+        # Optimistically refresh only if searching logic permits or do lazy refresh. 
+        # Ideally we should only refresh for the page we are viewing or refresh all async.
+        # For simplicity, we refresh all team members' balances as it's a team view.
+        # But wait, if employee_ids is huge, this is slow.
+        # Let's assume the roster size isn't massive for a manager.
         for eid in employee_ids:
             self.calculate_pro_rata_accrual(db, eid, year)
-        return leave_repository.get_balances_for_employees(db, employee_ids, year)
+        return leave_repository.get_balances_for_employees(db, employee_ids, year, skip=skip, limit=limit, search=search)
 
-    def get_all_balances(self, db: Session, year: int):
-        # This could be slow for many employees, but for internal HRMS it's okay for now
-        employees = db.query(Employee).all()
+    def get_all_balances(self, db: Session, year: int, skip: int = 0, limit: int = 10, search: Optional[str] = None) -> Tuple[List[LeaveBalance], int]:
+        from sqlalchemy import or_
+        query = db.query(Employee).filter(Employee.employment_status == "active")
+        
+        if search:
+            search_filter = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Employee.first_name.ilike(search_filter),
+                    Employee.last_name.ilike(search_filter),
+                    Employee.employee_code.ilike(search_filter)
+                )
+            )
+        
+        total = query.count()
+        employees = query.offset(skip).limit(limit).all()
+        
         for e in employees:
             self.calculate_pro_rata_accrual(db, e.id, year)
-        return db.query(LeaveBalance).filter(LeaveBalance.leave_year == year).all()
+            
+        employee_ids = [e.id for e in employees]
+        results = db.query(LeaveBalance).filter(
+            LeaveBalance.leave_year == year,
+            LeaveBalance.employee_id.in_(employee_ids)
+        ).all()
+        
+        return results, total
 
-    def get_team_applications(self, db: Session, manager_id: int, year: Optional[int] = None):
+    def get_team_applications(self, db: Session, manager_id: int, skip: int = 0, limit: int = 10, year: Optional[int] = None, search: Optional[str] = None):
         employee_ids = leave_repository.get_team_employee_ids(db, manager_id)
-        return leave_repository.get_applications(db, employee_ids=employee_ids, year=year)
+        if not employee_ids:
+            return [], 0
+        return leave_repository.get_applications(db, skip=skip, limit=limit, employee_ids=employee_ids, year=year, search=search)
 
     def create_leave_type(self, db: Session, data: dict):
         lt = LeaveType(**data)
@@ -638,16 +693,36 @@ class LeaveService:
         db.refresh(credit_req)
         return credit_req
 
-    def get_my_credit_requests(self, db: Session, employee_id: int):
-        return db.query(LeaveCreditRequest).filter(LeaveCreditRequest.employee_id == employee_id).order_by(LeaveCreditRequest.created_at.desc()).all()
+    def get_my_credit_requests(self, db: Session, employee_id: int, skip: int = 0, limit: int = 10):
+        query = db.query(LeaveCreditRequest).filter(LeaveCreditRequest.employee_id == employee_id)
+        total = query.count()
+        reqs = query.order_by(LeaveCreditRequest.created_at.desc()).offset(skip).limit(limit).all()
+        for req in reqs:
+            req.leave_type_name = req.leave_type.name.value.replace('_', ' ').title() if req.leave_type else None
+            req.employee_name = req.employee.full_name if req.employee else None
+        return reqs, total
 
-    def get_pending_credit_requests(self, db: Session, manager_id: int, role: str):
+    def get_pending_credit_requests(self, db: Session, manager_id: int, role: str, skip: int = 0, limit: int = 10, search: Optional[str] = None):
         query = db.query(LeaveCreditRequest).filter(LeaveCreditRequest.status == LeaveCreditStatus.pending)
         if role not in ['hr_admin', 'super_admin']:
-            # Filter by team
+            from backend.repositories.leave_repository import leave_repository
             team_ids = leave_repository.get_team_employee_ids(db, manager_id)
             query = query.filter(LeaveCreditRequest.employee_id.in_(team_ids))
-        return query.all()
+        
+        if search:
+            from sqlalchemy import or_
+            query = query.join(Employee, LeaveCreditRequest.employee_id == Employee.id).filter(or_(
+                Employee.first_name.ilike(f"%{search}%"),
+                Employee.last_name.ilike(f"%{search}%"),
+                LeaveCreditRequest.reason.ilike(f"%{search}%")
+            ))
+            
+        total = query.count()
+        reqs = query.order_by(LeaveCreditRequest.created_at.desc()).offset(skip).limit(limit).all()
+        for req in reqs:
+            req.leave_type_name = req.leave_type.name.value.replace('_', ' ').title() if req.leave_type else None
+            req.employee_name = req.employee.full_name if req.employee else None
+        return reqs, total
 
     def approve_leave_credit(self, db: Session, request_id: int, approver_id: int):
         req = db.query(LeaveCreditRequest).filter(LeaveCreditRequest.id == request_id).first()
@@ -727,5 +802,53 @@ class LeaveService:
         
         leave_repository.delete_holiday(db, holiday)
         return True
+
+    def recall_leave(self, db: Session, application_id: int, approver_id: int, recall_date: date, reason: str):
+        app = leave_repository.get_application(db, application_id)
+        if not app:
+            raise HTTPException(status_code=404, detail="Application not found")
+        
+        if app.status != LeaveApplicationStatus.approved:
+            raise HTTPException(status_code=400, detail="Only approved leaves can be recalled")
+        
+        if recall_date < app.from_date or recall_date >= app.to_date:
+            raise HTTPException(status_code=400, detail=f"Recall date must be between {app.from_date} and {app.to_date}")
+
+        # Calculate new working days up to recall_date
+        new_days = self.calculate_working_days(db, app.from_date, recall_date, app.duration_type)
+        unused_days = Decimal(str(app.number_of_days)) - new_days
+
+        if unused_days < 0:
+            # Should not happen due to validation above, but safety first
+            raise HTTPException(status_code=400, detail="Invalid recall date: results in more days than original leave")
+
+        # 1. Update Balance: Credit back unused days
+        balance = leave_repository.get_balance(db, app.employee_id, app.leave_type_id, app.from_date.year)
+        if balance:
+            balance.taken -= unused_days
+            balance.available += unused_days
+            leave_repository.update_balance(db, balance)
+
+        # 2. Update Application
+        app.status = LeaveApplicationStatus.recalled
+        app.to_date = recall_date
+        app.number_of_days = float(new_days)
+        app.approver_note = f"Recalled: {reason}"
+        app.approver_id = approver_id
+        app.approved_date = func.now()
+
+        # 3. Log the action
+        log = LeaveApprovalLog(
+            application_id=app.id,
+            approver_id=approver_id,
+            step=app.current_approval_step,
+            status=LeaveApplicationStatus.recalled,
+            comments=reason
+        )
+        db.add(log)
+        
+        db.commit()
+        db.refresh(app)
+        return app
 
 leave_service = LeaveService()

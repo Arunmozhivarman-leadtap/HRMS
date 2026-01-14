@@ -16,7 +16,7 @@ export function PublicHolidayList() {
     // Filter upcoming holidays
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     const upcomingHolidays = holidays?.filter(h => new Date(h.holiday_date) >= today)
         .sort((a, b) => new Date(a.holiday_date).getTime() - new Date(b.holiday_date).getTime()) || []
 
@@ -51,7 +51,7 @@ export function PublicHolidayList() {
                                         <p className="text-xs text-muted-foreground">{weekday}</p>
                                     </div>
                                     {holiday.is_restricted && (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-700 border border-zinc-200">
                                             Restricted
                                         </span>
                                     )}

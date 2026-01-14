@@ -16,11 +16,17 @@ import { cn } from "@/lib/utils"
 import { MyDocumentsView } from "@/features/documents/components/my-documents-view"
 import { useUser } from "@/hooks/use-user"
 
+import { usePagination } from "@/hooks/use-pagination"
+import { DataTable } from "@/components/shared/data-table"
+import { ColumnDef } from "@tanstack/react-table"
+
 export default function AdminDocumentsPage() {
     const { user } = useUser()
     const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
     const [dialogOpen, setDialogOpen] = useState(false)
-    const [searchTerm, setSearchTerm] = useState("")
+
+    const queuePagination = usePagination(10)
+    const allPagination = usePagination(10)
 
     // Strict role check: Super Admin (CEO) should NOT see My Documents/Personal Tab
     const canSeeMyDocuments = user?.role !== "super_admin"
@@ -30,14 +36,14 @@ export default function AdminDocumentsPage() {
         queryFn: () => fetcher<any>("/documents/reports")
     })
 
-    const { data: pendingDocuments } = useQuery<Document[]>({
-        queryKey: ["documents", "pending"],
-        queryFn: () => fetcher("/documents/list?verification_status=pending")
+    const { data: pendingDocuments, isLoading: isLoadingQueue } = useQuery<any>({
+        queryKey: ["documents", "pending", queuePagination.skip, queuePagination.limit, queuePagination.search],
+        queryFn: () => fetcher(`/documents/list?verification_status=pending&skip=${queuePagination.skip}&limit=${queuePagination.limit}&search=${queuePagination.search}`)
     })
 
-    const { data: allDocuments } = useQuery<Document[]>({
-        queryKey: ["documents", "all"],
-        queryFn: () => fetcher("/documents/list")
+    const { data: allDocuments, isLoading: isLoadingAll } = useQuery<any>({
+        queryKey: ["documents", "all", allPagination.skip, allPagination.limit, allPagination.search],
+        queryFn: () => fetcher(`/documents/list?skip=${allPagination.skip}&limit=${allPagination.limit}&search=${allPagination.search}`)
     })
 
     const handleVerifyClick = (doc: Document) => {
@@ -45,21 +51,74 @@ export default function AdminDocumentsPage() {
         setDialogOpen(true)
     }
 
-    const filteredAllDocs = allDocuments?.filter(doc =>
-        doc.employee?.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.employee?.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.document_type.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-
     const getStatusBadge = (status: DocumentVerificationStatus) => {
         switch (status) {
-            case DocumentVerificationStatus.verified: return <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-200 border-none shadow-none capitalize">Verified</Badge>
-            case DocumentVerificationStatus.rejected: return <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200 border-none shadow-none capitalize">Rejected</Badge>
-            case DocumentVerificationStatus.reupload_required: return <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none shadow-none capitalize">Re-upload Req</Badge>
-            case DocumentVerificationStatus.expired: return <Badge variant="secondary" className="bg-zinc-100 text-zinc-700 hover:bg-zinc-200 border-none shadow-none capitalize">Expired</Badge>
-            default: return <Badge variant="outline" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-none shadow-none capitalize">Pending</Badge>
+            case DocumentVerificationStatus.verified: return <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-200 border-none shadow-none capitalize font-bold text-[10px]">Verified</Badge>
+            case DocumentVerificationStatus.rejected: return <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200 border-none shadow-none capitalize font-bold text-[10px]">Rejected</Badge>
+            case DocumentVerificationStatus.reupload_required: return <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none shadow-none capitalize font-bold text-[10px]">Re-upload Req</Badge>
+            case DocumentVerificationStatus.expired: return <Badge variant="secondary" className="bg-zinc-100 text-zinc-700 hover:bg-zinc-200 border-none shadow-none capitalize font-bold text-[10px]">Expired</Badge>
+            default: return <Badge variant="outline" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-none shadow-none capitalize font-bold text-[10px]">Pending</Badge>
         }
     }
+
+    const queueColumns: ColumnDef<Document>[] = [
+        {
+            accessorKey: "employee",
+            header: "Employee",
+            cell: ({ row }) => `${row.original.employee?.first_name} ${row.original.employee?.last_name}`
+        },
+        {
+            accessorKey: "document_type",
+            header: "Document Type",
+            cell: ({ row }) => row.original.document_type.replace(/_/g, " ")
+        },
+        {
+            accessorKey: "created_at",
+            header: "Uploaded",
+            cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString()
+        },
+        {
+            id: "actions",
+            header: () => <div className="text-right">Action</div>,
+            cell: ({ row }) => (
+                <div className="text-right">
+                    <Button size="sm" onClick={() => handleVerifyClick(row.original)} className="font-bold text-[11px] h-8 rounded-lg">Review</Button>
+                </div>
+            )
+        }
+    ]
+
+    const allColumns: ColumnDef<Document>[] = [
+        {
+            accessorKey: "employee",
+            header: "Employee",
+            cell: ({ row }) => `${row.original.employee?.first_name} ${row.original.employee?.last_name}`
+        },
+        {
+            accessorKey: "document_type",
+            header: "Type",
+            cell: ({ row }) => row.original.document_type.replace(/_/g, " ")
+        },
+        {
+            accessorKey: "verification_status",
+            header: "Status",
+            cell: ({ row }) => getStatusBadge(row.original.verification_status)
+        },
+        {
+            accessorKey: "created_at",
+            header: "Uploaded",
+            cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString()
+        },
+        {
+            id: "actions",
+            header: () => <div className="text-right">Action</div>,
+            cell: ({ row }) => (
+                <div className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => handleVerifyClick(row.original)} className="font-bold text-[11px] h-8 rounded-lg">Details</Button>
+                </div>
+            )
+        }
+    ]
 
     return (
         <div className="space-y-8">
@@ -123,6 +182,11 @@ export default function AdminDocumentsPage() {
                         className="rounded-lg px-6 py-2.5 text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
                     >
                         Verification Queue
+                        {pendingDocuments?.total > 0 && (
+                            <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700 border-none px-1.5 h-4 min-w-4 flex items-center justify-center rounded-full text-[10px] font-bold">
+                                {pendingDocuments.total}
+                            </Badge>
+                        )}
                     </TabsTrigger>
                     <TabsTrigger
                         value="all"
@@ -146,111 +210,44 @@ export default function AdminDocumentsPage() {
                             <CardTitle className="text-xl font-serif font-medium text-foreground">Verification Queue</CardTitle>
                             <CardDescription>Review and validate recently uploaded documents.</CardDescription>
                         </CardHeader>
-                        <CardContent className="p-0 flex-1 flex flex-col min-h-0">
-                            <div className="overflow-auto max-h-[500px] flex-1">
-                                <table className="w-full text-sm text-left border-collapse">
-                                    <thead className="bg-muted/90 backdrop-blur-sm text-muted-foreground [&_th]:font-medium [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider sticky top-0 z-10 shadow-sm">
-                                        <tr className="border-b border-border/40">
-                                            <th className="h-10 px-6 align-middle">Employee</th>
-                                            <th className="h-10 px-6 align-middle">Document Type</th>
-                                            <th className="h-10 px-6 align-middle">Uploaded</th>
-                                            <th className="h-10 px-6 align-middle text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border/40">
-                                        {!pendingDocuments || pendingDocuments.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={4} className="p-10 text-center text-muted-foreground">
-                                                    No pending documents to review.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            pendingDocuments.map((doc) => (
-                                                <tr key={doc.id} className="transition-colors hover:bg-muted/30">
-                                                    <td className="p-6 align-middle font-medium">
-                                                        {doc.employee?.first_name} {doc.employee?.last_name}
-                                                    </td>
-                                                    <td className="p-6 align-middle capitalize">
-                                                        {doc.document_type.replace(/_/g, " ")}
-                                                    </td>
-                                                    <td className="p-6 align-middle">
-                                                        {new Date(doc.created_at).toLocaleDateString()}
-                                                    </td>
-                                                    <td className="p-6 align-middle text-right">
-                                                        <Button size="sm" onClick={() => handleVerifyClick(doc)}>Review</Button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                        <CardContent className="p-4 pt-0 flex-1 flex flex-col min-h-0">
+                            <DataTable
+                                columns={queueColumns}
+                                data={pendingDocuments?.items || []}
+                                totalCount={pendingDocuments?.total || 0}
+                                pageIndex={queuePagination.pageIndex}
+                                pageSize={queuePagination.pageSize}
+                                onPageChange={queuePagination.onPageChange}
+                                onPageSizeChange={queuePagination.onPageSizeChange}
+                                onSearch={queuePagination.onSearch}
+                                isLoading={isLoadingQueue}
+                                searchPlaceholder="Search queue..."
+                                hasBorder={false}
+                            />
                         </CardContent>
                     </Card>
                 </TabsContent>
 
                 <TabsContent value="all" className="mt-0">
                     <Card className="bg-background border shadow-sm flex flex-col min-h-[400px]">
-                        <CardHeader className="border-b border-border/40 pb-4 flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle className="text-xl font-serif font-medium text-foreground">Document Registry</CardTitle>
-                                <CardDescription>Complete history of all employee documents.</CardDescription>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="relative">
-                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        placeholder="Search employees..."
-                                        className="pl-9 w-[250px] bg-background border-border/60"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
-                                </div>
-                            </div>
+                        <CardHeader className="border-b border-border/40 pb-4">
+                            <CardTitle className="text-xl font-serif font-medium text-foreground">Document Registry</CardTitle>
+                            <CardDescription>Complete history of all employee documents.</CardDescription>
                         </CardHeader>
-                        <CardContent className="p-0 flex-1 flex flex-col min-h-0">
-                            <div className="overflow-auto max-h-[600px] flex-1">
-                                <table className="w-full text-sm text-left border-collapse">
-                                    <thead className="bg-muted/90 backdrop-blur-sm text-muted-foreground [&_th]:font-medium [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider sticky top-0 z-10 shadow-sm">
-                                        <tr className="border-b border-border/40">
-                                            <th className="h-10 px-6 align-middle">Employee</th>
-                                            <th className="h-10 px-6 align-middle">Type</th>
-                                            <th className="h-10 px-6 align-middle">Status</th>
-                                            <th className="h-10 px-6 align-middle">Uploaded</th>
-                                            <th className="h-10 px-6 align-middle text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border/40">
-                                        {!filteredAllDocs || filteredAllDocs.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={5} className="p-10 text-center text-muted-foreground">
-                                                    No documents found.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            filteredAllDocs.map((doc) => (
-                                                <tr key={doc.id} className="transition-colors hover:bg-muted/30">
-                                                    <td className="p-6 align-middle font-medium">
-                                                        {doc.employee?.first_name} {doc.employee?.last_name}
-                                                    </td>
-                                                    <td className="p-6 align-middle capitalize">
-                                                        {doc.document_type.replace(/_/g, " ")}
-                                                    </td>
-                                                    <td className="p-6 align-middle">
-                                                        {getStatusBadge(doc.verification_status)}
-                                                    </td>
-                                                    <td className="p-6 align-middle">
-                                                        {new Date(doc.created_at).toLocaleDateString()}
-                                                    </td>
-                                                    <td className="p-6 align-middle text-right">
-                                                        <Button variant="ghost" size="sm" onClick={() => handleVerifyClick(doc)}>Details</Button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                        <CardContent className="p-4 pt-0 flex-1 flex flex-col min-h-0">
+                            <DataTable
+                                columns={allColumns}
+                                data={allDocuments?.items || []}
+                                totalCount={allDocuments?.total || 0}
+                                pageIndex={allPagination.pageIndex}
+                                pageSize={allPagination.pageSize}
+                                onPageChange={allPagination.onPageChange}
+                                onPageSizeChange={allPagination.onPageSizeChange}
+                                onSearch={allPagination.onSearch}
+                                isLoading={isLoadingAll}
+                                searchPlaceholder="Search documents..."
+                                hasBorder={false}
+                            />
                         </CardContent>
                     </Card>
                 </TabsContent>

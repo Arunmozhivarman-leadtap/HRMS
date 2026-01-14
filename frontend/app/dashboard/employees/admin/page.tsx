@@ -24,11 +24,28 @@ import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
+import { usePagination } from "@/hooks/use-pagination";
+
 export default function AdminEmployeesPage() {
-  const [search, setSearch] = useState("");
+  const {
+    pageIndex,
+    pageSize,
+    search,
+    skip,
+    limit,
+    onPageChange,
+    onPageSizeChange,
+    onSearch
+  } = usePagination(10);
+
   const [open, setOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
-  const { data, isLoading } = useEmployees({ search, archived: showArchived });
+  const { data, isLoading } = useEmployees({
+    skip,
+    limit,
+    search,
+    archived: showArchived
+  });
 
   return (
     <div className="space-y-8">
@@ -82,8 +99,8 @@ export default function AdminEmployeesPage() {
           <Input
             placeholder="Search by name, email, or employee code..."
             className="pl-10 h-11 bg-background border-border/60 focus:ring-primary/20 transition-all text-sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            defaultValue={search}
+            onChange={(e) => onSearch(e.target.value)}
           />
         </div>
       </div>
@@ -94,18 +111,16 @@ export default function AdminEmployeesPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <AdminEmployeeTable employees={data?.items || []} isArchivedView={showArchived} />
-
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground font-bold uppercase tracking-widest px-2 bg-muted/30 py-3 rounded-lg border border-border/40">
-            <p className="flex items-center gap-2">
-              <Users className="h-3 w-3" />
-              Showing {data?.items.length || 0} of {data?.total || 0} {showArchived ? "Archived" : "Active"} records
-            </p>
-            <div className="flex gap-4">
-              <Button variant="ghost" size="sm" className="h-7 px-4 hover:bg-background/80" disabled>Previous</Button>
-              <Button variant="ghost" size="sm" className="h-7 px-4 hover:bg-background/80" disabled>Next</Button>
-            </div>
-          </div>
+          <AdminEmployeeTable
+            employees={data?.items || []}
+            totalCount={data?.total || 0}
+            pageSize={pageSize}
+            pageIndex={pageIndex}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+            onSearch={onSearch}
+            isArchivedView={showArchived}
+          />
         </div>
       )}
     </div>

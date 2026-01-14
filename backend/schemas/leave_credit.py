@@ -19,6 +19,8 @@ class LeaveCreditRequestResponse(LeaveCreditRequestBase):
     approved_date: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    employee_name: Optional[str] = None
+    leave_type_name: Optional[str] = None
 
     class Config:
         from_attributes = True

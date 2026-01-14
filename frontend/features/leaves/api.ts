@@ -1,4 +1,5 @@
 import { fetcher } from "@/lib/api";
+import { PaginatedResponse } from "@/types/api";
 import {
     LeaveType,
     LeaveBalance,
@@ -41,13 +42,20 @@ export const applyLeave = async (data: LeaveApplicationCreate, attachment?: File
     });
 };
 
-export const getMyLeaveApplications = async (year?: number): Promise<LeaveApplication[]> => {
-    const query = year ? `?year=${year}` : "";
-    return fetcher<LeaveApplication[]>(`/leaves/applications/my${query}`);
+export const getMyLeaveApplications = async (params: { skip?: number, limit?: number, year?: number } = {}): Promise<PaginatedResponse<LeaveApplication>> => {
+    const queryParams = new URLSearchParams();
+    if (params.skip !== undefined) queryParams.append("skip", params.skip.toString());
+    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+    if (params.year) queryParams.append("year", params.year.toString());
+    return fetcher<PaginatedResponse<LeaveApplication>>(`/leaves/applications/my?${queryParams.toString()}`);
 };
 
-export const getPendingApprovals = async (): Promise<LeaveApplication[]> => {
-    return fetcher<LeaveApplication[]>("/leaves/approvals/pending");
+export const getPendingApprovals = async (params: { skip?: number, limit?: number, search?: string } = {}): Promise<PaginatedResponse<LeaveApplication>> => {
+    const queryParams = new URLSearchParams();
+    if (params.skip !== undefined) queryParams.append("skip", params.skip.toString());
+    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+    if (params.search) queryParams.append("search", params.search);
+    return fetcher<PaginatedResponse<LeaveApplication>>(`/leaves/approvals/pending?${queryParams.toString()}`);
 };
 
 export const approveLeave = async (id: number, note?: string): Promise<LeaveApplication> => {
@@ -111,24 +119,37 @@ export const getPublicHolidays = async (year?: number): Promise<PublicHoliday[]>
     return fetcher<PublicHoliday[]>(`/leaves/holidays${query}`);
 };
 
-export const getTeamLeaveBalances = async (year?: number): Promise<LeaveBalance[]> => {
+export const getRestrictedHolidays = async (year?: number): Promise<PublicHoliday[]> => {
     const query = year ? `?year=${year}` : "";
-    return fetcher<LeaveBalance[]>(`/leaves/balances/team${query}`);
+    return fetcher<PublicHoliday[]>(`/leaves/holidays/restricted${query}`);
 };
 
-export const getAllLeaveBalances = async (year?: number): Promise<LeaveBalance[]> => {
-    const query = year ? `?year=${year}` : "";
-    return fetcher<LeaveBalance[]>(`/leaves/balances/all${query}`);
+export const getTeamLeaveBalances = async (params: { skip?: number, limit?: number, search?: string, year?: number } = {}): Promise<PaginatedResponse<LeaveBalance>> => {
+    const queryParams = new URLSearchParams();
+    if (params.skip !== undefined) queryParams.append("skip", params.skip.toString());
+    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+    if (params.search) queryParams.append("search", params.search);
+    if (params.year) queryParams.append("year", params.year.toString());
+    return fetcher<PaginatedResponse<LeaveBalance>>(`/leaves/balances/team?${queryParams.toString()}`);
 };
 
-export const getTeamLeaveApplications = async (year?: number): Promise<LeaveApplication[]> => {
-    const query = year ? `?year=${year}` : "";
-    return fetcher<LeaveApplication[]>(`/leaves/applications/team${query}`);
+
+export const getTeamLeaveApplications = async (params: { skip?: number, limit?: number, search?: string, year?: number } = {}): Promise<PaginatedResponse<LeaveApplication>> => {
+    const queryParams = new URLSearchParams();
+    if (params.skip !== undefined) queryParams.append("skip", params.skip.toString());
+    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+    if (params.search) queryParams.append("search", params.search);
+    if (params.year) queryParams.append("year", params.year.toString());
+    return fetcher<PaginatedResponse<LeaveApplication>>(`/leaves/applications/team?${queryParams.toString()}`);
 };
 
-export const getAllLeaveApplications = async (year?: number): Promise<LeaveApplication[]> => {
-    const query = year ? `?year=${year}` : "";
-    return fetcher<LeaveApplication[]>(`/leaves/applications/all${query}`);
+export const getAllLeaveApplications = async (params: { skip?: number, limit?: number, search?: string, year?: number } = {}): Promise<PaginatedResponse<LeaveApplication>> => {
+    const queryParams = new URLSearchParams();
+    if (params.skip !== undefined) queryParams.append("skip", params.skip.toString());
+    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+    if (params.search) queryParams.append("search", params.search);
+    if (params.year) queryParams.append("year", params.year.toString());
+    return fetcher<PaginatedResponse<LeaveApplication>>(`/leaves/applications/all?${queryParams.toString()}`);
 };
 
 export const createLeaveType = async (data: Partial<LeaveType>): Promise<LeaveType> => {
@@ -189,12 +210,19 @@ export const requestLeaveCredit = async (data: LeaveCreditRequestCreate): Promis
     });
 };
 
-export const getMyCreditRequests = async (): Promise<LeaveCreditRequest[]> => {
-    return fetcher<LeaveCreditRequest[]>("/leaves/credit/my");
+export const getMyCreditRequests = async (params: { skip?: number, limit?: number } = {}): Promise<PaginatedResponse<LeaveCreditRequest>> => {
+    const queryParams = new URLSearchParams();
+    if (params.skip !== undefined) queryParams.append("skip", params.skip.toString());
+    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+    return fetcher<PaginatedResponse<LeaveCreditRequest>>(`/leaves/credit/my?${queryParams.toString()}`);
 };
 
-export const getPendingCreditRequests = async (): Promise<LeaveCreditRequest[]> => {
-    return fetcher<LeaveCreditRequest[]>("/leaves/credit/pending");
+export const getPendingCreditRequests = async (params: { skip?: number, limit?: number, search?: string } = {}): Promise<PaginatedResponse<LeaveCreditRequest>> => {
+    const queryParams = new URLSearchParams();
+    if (params.skip !== undefined) queryParams.append("skip", params.skip.toString());
+    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+    if (params.search) queryParams.append("search", params.search);
+    return fetcher<PaginatedResponse<LeaveCreditRequest>>(`/leaves/credit/pending?${queryParams.toString()}`);
 };
 
 export const approveLeaveCredit = async (id: number): Promise<LeaveCreditRequest> => {
@@ -224,4 +252,23 @@ export const deleteHoliday = async (id: number): Promise<void> => {
     return fetcher<void>(`/leaves/holidays/${id}`, {
         method: "DELETE",
     });
+};
+
+export const recallLeave = async (id: number, recallDate: string, reason: string): Promise<LeaveApplication> => {
+    return fetcher<LeaveApplication>(`/leaves/recall/${id}`, {
+        method: "POST",
+        body: JSON.stringify({ recall_date: recallDate, reason }),
+        headers: {
+            "Content-Type": "application/json",
+        },
+    });
+};
+
+export const getAllLeaveBalances = async (params: { skip?: number, limit?: number, search?: string, year?: number } = {}): Promise<PaginatedResponse<LeaveBalance>> => {
+    const queryParams = new URLSearchParams();
+    if (params.skip !== undefined) queryParams.append("skip", params.skip.toString());
+    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+    if (params.search) queryParams.append("search", params.search);
+    if (params.year) queryParams.append("year", params.year.toString());
+    return fetcher<PaginatedResponse<LeaveBalance>>(`/leaves/balances/all?${queryParams.toString()}`);
 };

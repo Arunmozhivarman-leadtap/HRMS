@@ -9,10 +9,12 @@ from backend.repositories.leave_repository import leave_repository
 from backend.schemas.leave import (
     LeaveApplicationCreate, LeaveApplicationResponse, 
     LeaveBalanceResponse, LeaveTypeResponse, PublicHolidayResponse,
-    LeaveTypeBase, LeaveApprovalAction, PublicHolidayCreate, PublicHolidayUpdate
+    LeaveTypeBase, LeaveApprovalAction, PublicHolidayCreate, PublicHolidayUpdate,
+    LeaveRecallRequest
 )
 from backend.schemas.leave_credit import LeaveCreditRequestCreate, LeaveCreditRequestResponse
 from backend.core.dependencies import get_current_user
+from backend.schemas.api import PaginatedResponse
 
 router = APIRouter()
 
@@ -79,8 +81,11 @@ def get_my_balances(
         raise HTTPException(status_code=400, detail="User is not linked to an employee record")
     return leave_service.get_employee_balances(db, current_user.employee_id, year)
 
-@router.get("/balances/team", response_model=List[LeaveBalanceResponse])
+@router.get("/balances/team", response_model=PaginatedResponse[LeaveBalanceResponse])
 def get_team_balances(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
+    search: Optional[str] = None,
     year: int = Query(default=date.today().year),
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -89,17 +94,35 @@ def get_team_balances(
          raise HTTPException(status_code=403, detail="Not authorized")
     if not current_user.employee_id:
          raise HTTPException(status_code=400, detail="User is not linked to an employee record")
-    return leave_service.get_team_balances(db, current_user.employee_id, year)
+    
+    items, total = leave_service.get_team_balances(db, current_user.employee_id, year, skip=skip, limit=limit, search=search)
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1,
+        "size": limit,
+        "pages": (total + limit - 1) // limit if total > 0 else 0
+    }
 
-@router.get("/balances/all", response_model=List[LeaveBalanceResponse])
+@router.get("/balances/all", response_model=PaginatedResponse[LeaveBalanceResponse])
 def get_all_balances(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
+    search: Optional[str] = None,
     year: int = Query(default=date.today().year),
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     if current_user.role not in ['hr_admin', 'super_admin']:
          raise HTTPException(status_code=403, detail="Not authorized")
-    return leave_service.get_all_balances(db, year)
+    items, total = leave_service.get_all_balances(db, year, skip=skip, limit=limit, search=search)
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1,
+        "size": limit,
+        "pages": (total + limit - 1) // limit if total > 0 else 0
+    }
 
 @router.post("/apply", response_model=LeaveApplicationResponse)
 def apply_leave(
@@ -132,18 +155,30 @@ def apply_leave(
     # We pass the attachment separately to the service
     return leave_service.apply_leave(db, application_data, current_user.employee_id, attachment)
 
-@router.get("/applications/my", response_model=List[LeaveApplicationResponse])
+@router.get("/applications/my", response_model=PaginatedResponse[LeaveApplicationResponse])
 def get_my_applications(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
     year: Optional[int] = None,
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     if not current_user.employee_id:
         raise HTTPException(status_code=400, detail="User is not linked to an employee record")
-    return leave_repository.get_applications(db, employee_id=current_user.employee_id, year=year)
+    items, total = leave_repository.get_applications(db, skip=skip, limit=limit, employee_id=current_user.employee_id, year=year)
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1,
+        "size": limit,
+        "pages": (total + limit - 1) // limit if total > 0 else 0
+    }
 
-@router.get("/applications/team", response_model=List[LeaveApplicationResponse])
+@router.get("/applications/team", response_model=PaginatedResponse[LeaveApplicationResponse])
 def get_team_applications(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
+    search: Optional[str] = None,
     year: Optional[int] = None,
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -152,35 +187,61 @@ def get_team_applications(
          raise HTTPException(status_code=403, detail="Not authorized")
     if not current_user.employee_id:
          raise HTTPException(status_code=400, detail="User is not linked to an employee record")
-    return leave_service.get_team_applications(db, current_user.employee_id, year)
+    items, total = leave_service.get_team_applications(db, current_user.employee_id, skip=skip, limit=limit, year=year, search=search)
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1,
+        "size": limit,
+        "pages": (total + limit - 1) // limit if total > 0 else 0
+    }
 
-@router.get("/applications/all", response_model=List[LeaveApplicationResponse])
+@router.get("/applications/all", response_model=PaginatedResponse[LeaveApplicationResponse])
 def get_all_applications(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
+    search: Optional[str] = None,
     year: Optional[int] = None,
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     if current_user.role not in ['hr_admin', 'super_admin']:
          raise HTTPException(status_code=403, detail="Not authorized")
-    return leave_repository.get_applications(db, year=year)
+    items, total = leave_repository.get_applications(db, skip=skip, limit=limit, year=year, search=search)
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1,
+        "size": limit,
+        "pages": (total + limit - 1) // limit if total > 0 else 0
+    }
 
-@router.get("/approvals/pending", response_model=List[LeaveApplicationResponse])
+@router.get("/approvals/pending", response_model=PaginatedResponse[LeaveApplicationResponse])
 def get_pending_approvals(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
+    search: Optional[str] = None,
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Only managers/admins/hr
     if current_user.role not in ['manager', 'hr_admin', 'super_admin']:
          raise HTTPException(status_code=403, detail="Not authorized")
     
     if not current_user.employee_id:
          raise HTTPException(status_code=400, detail="User is not linked to an employee record")
 
-    # For HR/Super Admin, maybe show ALL pending? Spec says "Approve Leaves: HR Admin (All), Manager (Team Only)"
     if current_user.role in ['hr_admin', 'super_admin']:
-        return leave_repository.get_applications(db, status="pending")
+        items, total = leave_repository.get_applications(db, skip=skip, limit=limit, status="pending", search=search)
     else:
-        return leave_repository.get_pending_applications_for_approver(db, current_user.employee_id)
+        items, total = leave_repository.get_pending_applications_for_approver(db, current_user.employee_id, skip=skip, limit=limit, search=search)
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1,
+        "size": limit,
+        "pages": (total + limit - 1) // limit if total > 0 else 0
+    }
 
 @router.post("/approve/{application_id}", response_model=LeaveApplicationResponse)
 def approve_leave_request(
@@ -213,6 +274,27 @@ def reject_leave_request(
          
     comments = action.comments if action else None
     return leave_service.reject_leave(db, application_id, current_user.employee_id, comments=comments)
+
+@router.post("/recall/{application_id}", response_model=LeaveApplicationResponse)
+def recall_leave_request(
+    application_id: int,
+    data: LeaveRecallRequest,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ['manager', 'hr_admin', 'super_admin']:
+         raise HTTPException(status_code=403, detail="Not authorized")
+
+    if not current_user.employee_id:
+         raise HTTPException(status_code=400, detail="Approver must be an employee")
+         
+    return leave_service.recall_leave(
+        db, 
+        application_id, 
+        current_user.employee_id, 
+        data.recall_date, 
+        data.reason
+    )
 
 @router.put("/update/{application_id}", response_model=LeaveApplicationResponse)
 def update_leave_request(
@@ -316,6 +398,13 @@ def delete_holiday(
     leave_service.delete_holiday(db, holiday_id)
     return None
 
+@router.get("/holidays/restricted", response_model=List[PublicHolidayResponse])
+def get_restricted_holidays(
+    year: int = Query(default=date.today().year),
+    db: Session = Depends(get_db)
+):
+    return leave_repository.get_restricted_holidays(db, year)
+
 @router.get("/applications/{application_id}/attachment")
 def get_leave_attachment(
     application_id: int,
@@ -356,17 +445,29 @@ def request_leave_credit(
         raise HTTPException(status_code=400, detail="User is not linked to an employee record")
     return leave_service.request_leave_credit(db, data, current_user.employee_id)
 
-@router.get("/credit/my", response_model=List[LeaveCreditRequestResponse])
+@router.get("/credit/my", response_model=PaginatedResponse[LeaveCreditRequestResponse])
 def get_my_credit_requests(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     if not current_user.employee_id:
         raise HTTPException(status_code=400, detail="User is not linked to an employee record")
-    return leave_service.get_my_credit_requests(db, current_user.employee_id)
+    items, total = leave_service.get_my_credit_requests(db, current_user.employee_id, skip=skip, limit=limit)
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1,
+        "size": limit,
+        "pages": (total + limit - 1) // limit if total > 0 else 0
+    }
 
-@router.get("/credit/pending", response_model=List[LeaveCreditRequestResponse])
+@router.get("/credit/pending", response_model=PaginatedResponse[LeaveCreditRequestResponse])
 def get_pending_credit_requests(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
+    search: Optional[str] = None,
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -374,7 +475,14 @@ def get_pending_credit_requests(
          raise HTTPException(status_code=403, detail="Not authorized")
     if not current_user.employee_id:
          raise HTTPException(status_code=400, detail="User is not linked to an employee record")
-    return leave_service.get_pending_credit_requests(db, current_user.employee_id, current_user.role)
+    items, total = leave_service.get_pending_credit_requests(db, current_user.employee_id, current_user.role, skip=skip, limit=limit, search=search)
+    return {
+        "items": items,
+        "total": total,
+        "page": (skip // limit) + 1,
+        "size": limit,
+        "pages": (total + limit - 1) // limit if total > 0 else 0
+    }
 
 @router.post("/credit/{req_id}/approve", response_model=LeaveCreditRequestResponse)
 def approve_leave_credit(

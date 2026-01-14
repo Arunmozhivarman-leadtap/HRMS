@@ -115,3 +115,7 @@ class PublicHolidayResponse(PublicHolidayBase):
 
 class LeaveApprovalAction(BaseModel):
     comments: Optional[str] = None
+
+class LeaveRecallRequest(BaseModel):
+    recall_date: date
+    reason: str

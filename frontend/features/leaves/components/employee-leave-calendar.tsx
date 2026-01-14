@@ -1,16 +1,16 @@
 "use client"
 
 import * as React from "react"
-import { 
-    format, 
-    parseISO, 
-    eachDayOfInterval, 
-    startOfMonth, 
-    endOfMonth, 
-    startOfWeek, 
-    endOfWeek, 
-    isSameMonth, 
-    addMonths, 
+import {
+    format,
+    parseISO,
+    eachDayOfInterval,
+    startOfMonth,
+    endOfMonth,
+    startOfWeek,
+    endOfWeek,
+    isSameMonth,
+    addMonths,
     subMonths,
     isToday
 } from "date-fns"
@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button"
 
 export function EmployeeLeaveCalendar() {
     const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date())
-    const { data: applications } = useMyLeaveApplications(currentMonth.getFullYear())
+    const { data: applications } = useMyLeaveApplications({ year: currentMonth.getFullYear(), limit: 500 })
     const { data: holidays } = usePublicHolidays(currentMonth.getFullYear())
 
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -33,7 +33,7 @@ export function EmployeeLeaveCalendar() {
     // Map applications to days
     const leaveDays = React.useMemo(() => {
         const days: Record<string, { status: LeaveApplicationStatus; type: string }> = {}
-        applications?.forEach(app => {
+        applications?.items?.forEach(app => {
             try {
                 const start = parseISO(app.from_date)
                 const end = app.to_date ? parseISO(app.to_date) : start
@@ -77,7 +77,7 @@ export function EmployeeLeaveCalendar() {
                         <CalendarIcon className="size-5 text-primary" />
                         Leave Calendar
                     </CardTitle>
-                    
+
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={goToToday} className="hidden sm:flex">
                             Today
@@ -96,7 +96,7 @@ export function EmployeeLeaveCalendar() {
                     </div>
                 </div>
             </CardHeader>
-            
+
             <CardContent className="px-0">
                 <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
                     {/* Weekday Headers */}
@@ -115,9 +115,9 @@ export function EmployeeLeaveCalendar() {
                             const leave = leaveDays[dateKey]
                             const holiday = holidayDays[dateKey]
                             const isCurrentMonth = isSameMonth(day, monthStart)
-                            
+
                             return (
-                                <div 
+                                <div
                                     key={dateKey}
                                     className={cn(
                                         "min-h-[100px] sm:min-h-[120px] p-2 border-r border-b relative transition-colors hover:bg-accent/5",
@@ -142,7 +142,7 @@ export function EmployeeLeaveCalendar() {
                                         {leave && (
                                             <div className={cn(
                                                 "px-1.5 py-0.5 rounded text-[10px] sm:text-xs font-medium border truncate",
-                                                leave.status === LeaveApplicationStatus.approved 
+                                                leave.status === LeaveApplicationStatus.approved
                                                     ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                                                     : "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                                             )} title={`${leave.type} (${leave.status})`}>

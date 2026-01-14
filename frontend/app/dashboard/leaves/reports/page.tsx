@@ -52,10 +52,7 @@ async function getAllBalances(year: number): Promise<LeaveBalance[]> {
 
 export default async function ReportsPage() {
     const currentYear = new Date().getFullYear();
-    const [analyticsData, balanceData] = await Promise.all([
-        getAnalyticsData(currentYear),
-        getAllBalances(currentYear)
-    ]);
+    const analyticsData = await getAnalyticsData(currentYear);
 
     return (
         <div className="space-y-8">
@@ -67,7 +64,7 @@ export default async function ReportsPage() {
                 </div>
             </div>
 
-            <ReportsDashboard analyticsData={analyticsData} balanceData={balanceData} />
+            <ReportsDashboard analyticsData={analyticsData} />
         </div>
     );
 }

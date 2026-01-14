@@ -14,30 +14,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
 
-interface BalanceReportTableProps {
-    data: LeaveBalance[]
-}
+import { useAllLeaveBalances, useLeaveTypes } from "../../hooks/use-leaves"
+import { usePagination } from "@/hooks/use-pagination"
+import { DataTable } from "@/components/shared/data-table"
+import { ColumnDef } from "@tanstack/react-table"
 
-export function BalanceReportTable({ data }: BalanceReportTableProps) {
-    const [searchTerm, setSearchTerm] = useState("")
+export function BalanceReportTable() {
+    const pagination = usePagination(10)
+    const currentYear = new Date().getFullYear()
 
-    // 1. Extract Unique Leave Types
-    const leaveTypes = Array.from(new Set(data.map(b => b.leave_type.abbr))).sort();
+    const { data: leaveTypesData } = useLeaveTypes()
+    const { data: balancesResponse, isLoading } = useAllLeaveBalances({
+        skip: pagination.skip,
+        limit: pagination.limit,
+        search: pagination.search,
+        year: currentYear
+    })
+
+    // 1. Extract Unique Leave Types from policy data (for columns)
+    const leaveTypes = leaveTypesData?.map(lt => lt.abbr).sort() || []
 
     // 2. Pivot Data: Group by Employee
     const pivotedData: Record<number, {
+        id: number,
         name: string,
         code: string,
         gender?: string,
         balances: Record<string, number>,
-        leaves: Record<string, LeaveBalance['leave_type']> // specific LeaveType info
+        leaves: Record<string, any>
     }> = {};
 
-    data.forEach(balance => {
+    balancesResponse?.items.forEach(balance => {
         if (!balance.employee) return;
 
         if (!pivotedData[balance.employee_id]) {
             pivotedData[balance.employee_id] = {
+                id: balance.employee_id,
                 name: balance.employee.full_name,
                 code: balance.employee.employee_code || `EMP${balance.employee_id}`,
                 gender: balance.employee.gender,
@@ -49,98 +61,79 @@ export function BalanceReportTable({ data }: BalanceReportTableProps) {
         pivotedData[balance.employee_id].leaves[balance.leave_type.abbr] = balance.leave_type;
     });
 
-    // 3. Convert to Array and Filter
-    const rows = Object.values(pivotedData)
-        .filter(row =>
-            row.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            row.code.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        .sort((a, b) => a.name.localeCompare(b.name));
+    const rows = Object.values(pivotedData).sort((a, b) => a.name.localeCompare(b.name))
+
+    const columns: ColumnDef<any>[] = [
+        {
+            accessorKey: "code",
+            header: "Code",
+            cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.code}</span>
+        },
+        {
+            accessorKey: "name",
+            header: "Employee Name",
+            cell: ({ row }) => <span className="font-medium">{row.original.name}</span>
+        },
+        ...leaveTypes.map(type => ({
+            id: `type-${type}`,
+            header: () => <div className="text-center font-bold">{type}</div>,
+            cell: ({ row }: { row: any }) => {
+                const pivotedRow = row.original;
+                const typeInfo = pivotedRow.leaves[type];
+                const val = pivotedRow.balances[type];
+
+                let isEligible = true;
+                if (typeInfo) {
+                    const empGender = (pivotedRow.gender || '').toLowerCase().trim();
+                    const typeName = (typeInfo.name || '').toString().toLowerCase();
+                    const typeAbbrStr = (typeInfo.abbr || '').toString().toLowerCase();
+                    const eligibility = (typeInfo.gender_eligibility || 'All').toLowerCase().trim();
+
+                    if (empGender) {
+                        if (eligibility === 'female' && empGender !== 'female') isEligible = false;
+                        if (eligibility === 'male' && empGender !== 'male') isEligible = false;
+                    }
+                    if (typeName.includes('maternity') || typeAbbrStr === 'ml') {
+                        if (empGender !== 'female') isEligible = false;
+                    }
+                    if (typeName.includes('paternity') || typeAbbrStr === 'pl') {
+                        if (empGender !== 'male') isEligible = false;
+                    }
+                }
+
+                if (!isEligible || val === undefined) return <div className="text-center text-muted-foreground">-</div>;
+
+                return (
+                    <div className="text-center">
+                        <span className={val < 0 ? "text-red-500 font-bold" : (val === 0 ? "text-muted-foreground" : "")}>
+                            {val}
+                        </span>
+                    </div>
+                );
+            }
+        }))
+    ]
 
     return (
         <Card className="bg-background border shadow-sm flex flex-col min-h-[400px]">
-            <CardHeader className="border-b border-border/40 pb-4 flex flex-row items-center justify-between space-y-0">
-                <div className="space-y-1">
-                    <CardTitle className="text-xl font-serif font-medium text-foreground">Employee Leave Balances</CardTitle>
-                    <CardDescription>Current available balance for all employees.</CardDescription>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Input
-                        placeholder="Search employee..."
-                        value={searchTerm}
-                        onChange={(event) => setSearchTerm(event.target.value)}
-                        className="w-[250px] h-9 text-sm"
-                    />
-                </div>
+            <CardHeader className="border-b border-border/40 pb-4">
+                <CardTitle className="text-xl font-serif font-medium text-foreground">Employee Leave Balances</CardTitle>
+                <CardDescription>Current available balance for all active employees.</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 flex-1 flex flex-col min-h-0">
-                <div className="overflow-auto max-h-[600px] flex-1">
-                    <table className="w-full text-sm text-left border-collapse">
-                        <thead className="bg-muted/90 backdrop-blur-sm text-muted-foreground [&_th]:font-medium [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider sticky top-0 z-10 shadow-sm">
-                            <tr className="border-b border-border/40">
-                                <th className="h-10 px-6 align-middle font-semibold">Code</th>
-                                <th className="h-10 px-6 align-middle font-semibold">Employee Name</th>
-                                {leaveTypes.map(type => (
-                                    <th key={type} className="h-10 px-6 align-middle text-center font-bold">{type}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border/40">
-                            {rows.length > 0 ? (
-                                rows.map((row) => (
-                                    <tr key={row.code} className="transition-colors hover:bg-muted/30">
-                                        <td className="p-6 align-middle font-mono text-xs text-muted-foreground">{row.code}</td>
-                                        <td className="p-6 align-middle font-medium text-foreground">{row.name}</td>
-                                        {leaveTypes.map(typeAbbr => {
-                                            const typeInfo = row.leaves[typeAbbr]; // Get strict LeaveType info
-                                            const val = row.balances[typeAbbr];
-
-                                            // Gender Check Logic
-                                            let isEligible = true;
-
-                                            if (typeInfo) {
-                                                const empGender = (row.gender || '').toLowerCase().trim();
-                                                const typeName = (typeInfo.name || '').toString().toLowerCase();
-                                                const typeAbbrStr = (typeInfo.abbr || '').toString().toLowerCase();
-                                                const eligibility = (typeInfo.gender_eligibility || 'All').toLowerCase().trim();
-
-                                                // 1. Check DB Configuration
-                                                if (empGender) {
-                                                    if (eligibility === 'female' && empGender !== 'female') isEligible = false;
-                                                    if (eligibility === 'male' && empGender !== 'male') isEligible = false;
-                                                }
-
-                                                // 2. Strict Business Logic (Name-based override)
-                                                if (typeName.includes('maternity') || typeAbbrStr === 'ml') {
-                                                    if (empGender !== 'female') isEligible = false;
-                                                }
-                                                if (typeName.includes('paternity') || typeAbbrStr === 'pl') {
-                                                    if (empGender !== 'male') isEligible = false;
-                                                }
-                                            }
-
-                                            return (
-                                                <td key={typeAbbr} className="p-6 align-middle text-center">
-                                                    {isEligible && val !== undefined ? (
-                                                        <span className={val < 0 ? "text-red-500 font-bold" : (val === 0 ? "text-muted-foreground" : "")}>
-                                                            {val}
-                                                        </span>
-                                                    ) : "-"}
-                                                </td>
-                                            )
-                                        })}
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={leaveTypes.length + 2} className="p-10 text-center text-muted-foreground">
-                                        No results found.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            <CardContent className="p-4 pt-0 flex-1 flex flex-col min-h-0">
+                <DataTable
+                    columns={columns}
+                    data={rows}
+                    totalCount={balancesResponse?.total || 0}
+                    pageIndex={pagination.pageIndex}
+                    pageSize={pagination.pageSize}
+                    onPageChange={pagination.onPageChange}
+                    onPageSizeChange={pagination.onPageSizeChange}
+                    onSearch={pagination.onSearch}
+                    isLoading={isLoading}
+                    searchPlaceholder="Search employees..."
+                    hasBorder={false}
+                />
             </CardContent>
         </Card>
     )

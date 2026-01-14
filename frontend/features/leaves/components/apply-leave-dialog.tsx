@@ -45,7 +45,7 @@ import {
 import { Calendar } from "@/components/ui/calendar"
 import { LeaveType, LeaveApplication } from "@/types/leave"
 import { cn, fileToBase64 } from "@/lib/utils"
-import { useLeaveTypes, useApplyLeave, useUpdateLeave, useMyLeaveBalances, usePublicHolidays } from "../hooks/use-leaves"
+import { useLeaveTypes, useApplyLeave, useUpdateLeave, useMyLeaveBalances, usePublicHolidays, useRestrictedHolidays } from "../hooks/use-leaves"
 import { useEmployeeProfile } from "@/hooks/use-employee"
 import { calculateWorkingDays } from "@/lib/leave-utils"
 import { Badge } from "@/components/ui/badge"
@@ -91,10 +91,14 @@ interface ApplyLeaveDialogProps {
     application?: LeaveApplication;
     applications?: LeaveApplication[];
     trigger?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function ApplyLeaveDialog({ application, applications, trigger }: ApplyLeaveDialogProps) {
-    const [isOpen, setIsOpen] = useState(false)
+export function ApplyLeaveDialog({ application, applications, trigger, open, onOpenChange }: ApplyLeaveDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false)
+    const isOpen = open !== undefined ? open : internalOpen
+    const setIsOpen = onOpenChange !== undefined ? onOpenChange : setInternalOpen
     const [fileName, setFileName] = useState<string | null>(null)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [shouldClearAttachment, setShouldClearAttachment] = useState(false)
@@ -103,6 +107,7 @@ export function ApplyLeaveDialog({ application, applications, trigger }: ApplyLe
     const { data: leaveTypes } = useLeaveTypes()
     const { data: balances } = useMyLeaveBalances()
     const { data: holidays } = usePublicHolidays(new Date().getFullYear())
+    const { data: restrictedHolidays } = useRestrictedHolidays(new Date().getFullYear())
     const { data: employee } = useEmployeeProfile()
     const { mutate: applyLeave, isPending: isApplying } = useApplyLeave()
     const { mutate: updateLeave, isPending: isUpdating } = useUpdateLeave()
@@ -185,6 +190,17 @@ export function ApplyLeaveDialog({ application, applications, trigger }: ApplyLe
 
     const selectedType = leaveTypes?.find(t => t.id === Number(watchLeaveTypeId))
     const selectedBalance = balances?.find(b => b.leave_type_id === Number(watchLeaveTypeId))
+    const isRH = selectedType?.name === 'restricted_holiday'
+
+    // For RH, when a date is selected, ensure it's Full Day and to_date matches from_date
+    useEffect(() => {
+        if (isRH && watchLeaveTypeId) {
+            form.setValue("duration_type", "Full Day")
+            if (watchFromDate) {
+                form.setValue("to_date", watchFromDate)
+            }
+        }
+    }, [isRH, watchLeaveTypeId, watchFromDate, form])
 
     const calculatedDays = useMemo(() => {
         if (!watchFromDate) return 0
@@ -315,7 +331,13 @@ export function ApplyLeaveDialog({ application, applications, trigger }: ApplyLe
 
     const isDateDisabled = (date: Date) => {
         const dateStr = format(date, 'yyyy-MM-dd');
-        const isHoliday = holidays?.some(h => h.holiday_date === dateStr) || false;
+
+        // If it's RH, only allow configured RH dates
+        if (isRH) {
+            return !restrictedHolidays?.some(h => h.holiday_date === dateStr);
+        }
+
+        const isHoliday = holidays?.some(h => h.holiday_date === dateStr && !h.is_restricted) || false;
         const isWeekend = isSaturday(date) || isSunday(date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -381,7 +403,11 @@ export function ApplyLeaveDialog({ application, applications, trigger }: ApplyLe
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Duration</FormLabel>
-                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <Select
+                                                        onValueChange={field.onChange}
+                                                        defaultValue={field.value}
+                                                        disabled={isRH}
+                                                    >
                                                         <FormControl>
                                                             <SelectTrigger className="mt-1.5 h-11 bg-zinc-50 border-zinc-200 focus:ring-primary/20 transition-all font-medium">
                                                                 <SelectValue />
@@ -390,7 +416,7 @@ export function ApplyLeaveDialog({ application, applications, trigger }: ApplyLe
                                                         <SelectContent>
                                                             <SelectItem value="Full Day">Full Day (1 Day)</SelectItem>
                                                             <SelectItem value="Half Day">Half Day (0.5 Day)</SelectItem>
-                                                            <SelectItem value="Multiple Days">Multiple Days</SelectItem>
+                                                            {!isRH && <SelectItem value="Multiple Days">Multiple Days</SelectItem>}
                                                         </SelectContent>
                                                     </Select>
                                                     <FormMessage />
@@ -415,33 +441,53 @@ export function ApplyLeaveDialog({ application, applications, trigger }: ApplyLe
                                                 render={({ field }) => (
                                                     <FormItem className="flex flex-col">
                                                         <FormLabel className="text-xs font-medium text-muted-foreground mb-1.5">
-                                                            {watchDurationType === "Multiple Days" ? "Start Date" : "Date"}
+                                                            {isRH ? "Select Restricted Holiday" : (watchDurationType === "Multiple Days" ? "Start Date" : "Date")}
                                                         </FormLabel>
-                                                        <Popover>
-                                                            <PopoverTrigger asChild>
+                                                        {isRH ? (
+                                                            <Select
+                                                                onValueChange={(val) => field.onChange(parseISO(val))}
+                                                                value={field.value ? format(field.value, 'yyyy-MM-dd') : undefined}
+                                                            >
                                                                 <FormControl>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        className={cn(
-                                                                            "h-11 pl-4 w-full text-left font-normal bg-zinc-50 border-zinc-200 hover:bg-zinc-100 transition-colors",
-                                                                            !field.value && "text-muted-foreground"
-                                                                        )}
-                                                                    >
-                                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                                    </Button>
+                                                                    <SelectTrigger className="h-11 bg-zinc-50 border-zinc-200">
+                                                                        <SelectValue placeholder="Choose a holiday" />
+                                                                    </SelectTrigger>
                                                                 </FormControl>
-                                                            </PopoverTrigger>
-                                                            <PopoverContent className="w-auto p-0" align="start">
-                                                                <Calendar
-                                                                    mode="single"
-                                                                    selected={field.value}
-                                                                    onSelect={field.onChange}
-                                                                    disabled={isDateDisabled}
-                                                                    initialFocus
-                                                                />
-                                                            </PopoverContent>
-                                                        </Popover>
+                                                                <SelectContent>
+                                                                    {restrictedHolidays?.map(h => (
+                                                                        <SelectItem key={h.id} value={h.holiday_date}>
+                                                                            {h.name} ({format(parseISO(h.holiday_date), 'PPP')})
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        ) : (
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <FormControl>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            className={cn(
+                                                                                "h-11 pl-4 w-full text-left font-normal bg-zinc-50 border-zinc-200 hover:bg-zinc-100 transition-colors",
+                                                                                !field.value && "text-muted-foreground"
+                                                                            )}
+                                                                        >
+                                                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                        </Button>
+                                                                    </FormControl>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-auto p-0" align="start">
+                                                                    <Calendar
+                                                                        mode="single"
+                                                                        selected={field.value}
+                                                                        onSelect={field.onChange}
+                                                                        disabled={isDateDisabled}
+                                                                        initialFocus
+                                                                    />
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                        )}
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}

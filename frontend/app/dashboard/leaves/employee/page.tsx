@@ -12,10 +12,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
 
+import { usePagination } from "@/hooks/use-pagination"
+
 export default function EmployeeLeavesPage() {
     const [isCreditDialogOpen, setIsCreditDialogOpen] = useState(false)
+    const pagination = usePagination(10)
+
     const { data: balances, isLoading: isLoadingBalances } = useMyLeaveBalances()
-    const { data: applications, isLoading: isLoadingApps } = useMyLeaveApplications()
+    const { data: applications, isLoading: isLoadingApps } = useMyLeaveApplications({
+        skip: pagination.skip,
+        limit: pagination.limit
+    })
 
     return (
         <div className="space-y-8">
@@ -31,7 +38,7 @@ export default function EmployeeLeavesPage() {
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Request Credit
                     </Button>
-                    <ApplyLeaveDialog applications={applications} />
+                    <ApplyLeaveDialog applications={applications?.items || []} />
                 </div>
             </div>
 
@@ -60,7 +67,15 @@ export default function EmployeeLeavesPage() {
                             <TabsContent value="history" className="mt-0">
                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                                     <div className="lg:col-span-8">
-                                        <LeaveHistoryTable applications={applications} isLoading={isLoadingApps} />
+                                        <LeaveHistoryTable
+                                            data={applications?.items || []}
+                                            totalCount={applications?.total || 0}
+                                            pageIndex={pagination.pageIndex}
+                                            pageSize={pagination.pageSize}
+                                            onPageChange={pagination.onPageChange}
+                                            onPageSizeChange={pagination.onPageSizeChange}
+                                            isLoading={isLoadingApps}
+                                        />
                                     </div>
                                     <div className="lg:col-span-4">
                                         <PublicHolidayList />

@@ -1,16 +1,19 @@
 "use client"
 
-import { usePendingApprovals, useTeamLeaveApplications } from "@/features/leaves/hooks/use-leaves"
+import { usePendingApprovals, useTeamLeaveApplications, usePendingCreditRequests } from "@/features/leaves/hooks/use-leaves"
 import { PendingApprovals } from "@/features/leaves/components/pending-approvals"
+import { CreditApprovals } from "@/features/leaves/components/credit-approvals"
 import { LeaveHistoryTable } from "@/features/leaves/components/leave-history-table"
 import { TeamLeaveCalendar } from "@/features/leaves/components/team-leave-calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Users, CalendarCheck, Clock } from "lucide-react"
 
 export default function ManagerLeavesPage() {
     const { data: teamApplications, isLoading: isLoadingTeamApps } = useTeamLeaveApplications()
     const { data: pendingApprovals } = usePendingApprovals()
+    const { data: pendingCredits } = usePendingCreditRequests()
 
     const stats = [
         {
@@ -18,8 +21,8 @@ export default function ManagerLeavesPage() {
             value: "8", // This should ideally come from team hook
             icon: Users,
             description: "Active employees",
-            color: "text-blue-600",
-            bg: "bg-blue-50"
+            color: "text-zinc-600",
+            bg: "bg-zinc-100"
         },
         {
             title: "Pending Requests",
@@ -66,15 +69,35 @@ export default function ManagerLeavesPage() {
                 ))}
             </div>
 
-            <PendingApprovals />
+            <Tabs defaultValue="app-queue" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:w-[600px] mb-8">
+                    <TabsTrigger value="app-queue" className="relative font-bold">
+                        Queue
+                        {pendingApprovals && pendingApprovals.length > 0 && (
+                            <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-700 border-none px-1.5 h-4 min-w-4 flex items-center justify-center rounded-full text-[10px] font-bold">
+                                {pendingApprovals.length}
+                            </Badge>
+                        )}
+                    </TabsTrigger>
+                    <TabsTrigger value="credit-requests" className="relative font-bold">
+                        Credits
+                        {pendingCredits && pendingCredits.length > 0 && (
+                            <Badge variant="secondary" className="ml-2 bg-zinc-100 text-zinc-700 border-none px-1.5 h-4 min-w-4 flex items-center justify-center rounded-full text-[10px] font-bold">
+                                {pendingCredits.length}
+                            </Badge>
+                        )}
+                    </TabsTrigger>
+                    <TabsTrigger value="history" className="font-bold">History</TabsTrigger>
+                    <TabsTrigger value="calendar" className="font-bold">Calendar</TabsTrigger>
+                </TabsList>
 
-            <Tabs defaultValue="history" className="w-full">
-                <div className="flex items-center justify-between mb-4">
-                    <TabsList>
-                        <TabsTrigger value="history">Team Leave History</TabsTrigger>
-                        <TabsTrigger value="calendar">Availability Calendar</TabsTrigger>
-                    </TabsList>
-                </div>
+                <TabsContent value="app-queue" className="mt-0">
+                    <PendingApprovals />
+                </TabsContent>
+
+                <TabsContent value="credit-requests" className="mt-0">
+                    <CreditApprovals />
+                </TabsContent>
 
                 <TabsContent value="history" className="mt-0">
                     <LeaveHistoryTable

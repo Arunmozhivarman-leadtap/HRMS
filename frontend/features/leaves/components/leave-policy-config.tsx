@@ -195,7 +195,7 @@ export function LeavePolicyConfig() {
                                         </Badge>
                                     )}
                                     {type.encashment && (
-                                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-tight py-0.5 px-2 rounded border-blue-100 bg-blue-50 text-blue-700">
+                                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-tight py-0.5 px-2 rounded border-zinc-200 bg-zinc-100 text-zinc-700">
                                             Encashment: Max {type.max_encashment_per_year || '∞'}
                                         </Badge>
                                     )}

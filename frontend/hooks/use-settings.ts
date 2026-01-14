@@ -21,10 +21,16 @@ export function useUpdateCompanySettings() {
     });
 }
 
-export function useMasterData(type: string) {
+export function useMasterData(type: string, params: { skip?: number, limit?: number, search?: string } = {}) {
     return useQuery({
-        queryKey: ["settings", "master", type],
-        queryFn: () => fetcher<any[]>(`/settings/${type}`),
+        queryKey: ["settings", "master", type, params],
+        queryFn: () => {
+            const queryParams = new URLSearchParams();
+            if (params.skip !== undefined) queryParams.append("skip", params.skip.toString());
+            if (params.limit !== undefined) queryParams.append("limit", params.limit.toString());
+            if (params.search) queryParams.append("search", params.search);
+            return fetcher<any>(`/settings/${type}?${queryParams.toString()}`);
+        },
     });
 }
 
