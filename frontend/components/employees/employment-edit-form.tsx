@@ -103,11 +103,11 @@ export function EmploymentEditForm({ employee, onSuccess, isAdmin = false }: Emp
                         )} />
 
                         <FormField control={form.control} name="designation_id" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Designation</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isAdmin}><FormControl><SelectTrigger className="h-10 bg-muted/20"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent>{designations?.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Designation</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isAdmin}><FormControl><SelectTrigger className="h-10 bg-muted/20"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent>{designations?.items.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                         )} />
 
                         <FormField control={form.control} name="department_id" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Department</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isAdmin}><FormControl><SelectTrigger className="h-10 bg-muted/20"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent>{departments?.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Department</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isAdmin}><FormControl><SelectTrigger className="h-10 bg-muted/20"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent>{departments?.items.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                         )} />
                     </div>
 
@@ -119,7 +119,7 @@ export function EmploymentEditForm({ employee, onSuccess, isAdmin = false }: Emp
                         )} />
 
                         <FormField control={form.control} name="employment_type" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Employment Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isAdmin}><FormControl><SelectTrigger className="h-10 bg-muted/20"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent>{employmentTypes?.map(type => <SelectItem key={type.name} value={type.name}>{type.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Employment Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isAdmin}><FormControl><SelectTrigger className="h-10 bg-muted/20"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent>{employmentTypes?.items.map(type => <SelectItem key={type.name} value={type.name}>{type.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                         )} />
 
                         <FormField control={form.control} name="manager_id" render={({ field }) => (

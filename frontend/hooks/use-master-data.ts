@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
+import { PaginatedResponse } from "@/types/api";
 
 export interface MasterData {
     id: number;
@@ -9,21 +10,21 @@ export interface MasterData {
 export function useDepartments() {
     return useQuery({
         queryKey: ["departments"],
-        queryFn: () => fetcher<MasterData[]>("/settings/departments"),
+        queryFn: () => fetcher<PaginatedResponse<MasterData>>("/settings/departments"),
     });
 }
 
 export function useDesignations() {
     return useQuery({
         queryKey: ["designations"],
-        queryFn: () => fetcher<MasterData[]>("/settings/designations"),
+        queryFn: () => fetcher<PaginatedResponse<MasterData>>("/settings/designations"),
     });
 }
 
 export function useEmploymentTypes() {
     return useQuery({
         queryKey: ["employment-types"],
-        queryFn: () => fetcher<MasterData[]>("/settings/employment-types"),
+        queryFn: () => fetcher<PaginatedResponse<MasterData>>("/settings/employment-types"),
     });
 }
 

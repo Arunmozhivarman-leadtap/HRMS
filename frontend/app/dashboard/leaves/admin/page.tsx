@@ -62,7 +62,7 @@ export default function AdminLeavesPage() {
                     <p className="text-sm text-muted-foreground">Global overview of attendance and leave policy compliance.</p>
                 </div>
                 <Button asChild variant="outline" className="rounded-full font-bold border-zinc-200">
-                    <Link href="/dashboard/settings/leaves">
+                    <Link href="/dashboard/settings/admin/leaves">
                         <ShieldCheck className="mr-2 h-4 w-4" /> Policy Settings
                     </Link>
                 </Button>

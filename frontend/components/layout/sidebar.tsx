@@ -28,8 +28,11 @@ const navigation = [
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
+import { useUser } from "@/hooks/use-user";
+
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useUser();
 
   const normalizePath = (path: string) =>
     path.replace(/\/$/, "");
@@ -52,6 +55,21 @@ export function Sidebar() {
     return false;
   };
 
+  const filteredNavigation = navigation.filter((item) => {
+    if (!user) return false;
+
+    // Settings: Hide for manager and employee
+    if (item.name === "Settings" && ["manager", "employee"].includes(user.role)) {
+      return false;
+    }
+
+    // Recruitment: Hide for employee
+    if (item.name === "Recruitment" && user.role === "employee") {
+      return false;
+    }
+
+    return true;
+  });
 
   return (
     <div className="flex h-full w-64 flex-col border-r bg-background/50 backdrop-blur-xl">
@@ -59,7 +77,7 @@ export function Sidebar() {
         <Logo />
       </div>
       <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
-        {navigation.map((item) => {
+        {filteredNavigation.map((item) => {
           const active = isActive(item.href, pathname);
           return (
             <Link
