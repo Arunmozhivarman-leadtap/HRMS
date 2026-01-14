@@ -145,7 +145,7 @@ export function LeavePolicyConfig() {
 
             <div className="grid gap-6">
                 {leaveTypes?.map((type) => (
-                    <Card key={type.id} className="border-zinc-200 overflow-hidden group hover:shadow-md transition-all duration-300">
+                    <Card key={type.id} className="border shadow-sm rounded-xl overflow-hidden group hover:shadow-md transition-all duration-300">
                         <div className="flex flex-col md:flex-row">
                             <div className="bg-zinc-50 md:w-56 p-6 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-zinc-100 transition-colors group-hover:bg-zinc-100/50">
                                 <div className="text-3xl font-serif font-bold text-primary mb-2 tracking-tighter">{type.abbr}</div>
@@ -224,7 +224,7 @@ export function LeavePolicyConfig() {
             >
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="mt-4">
-                        <div className="flex flex-col lg:flex-row gap-0 border rounded-2xl overflow-hidden bg-white border-zinc-200">
+                        <div className="flex flex-col lg:flex-row gap-0 border rounded-xl overflow-hidden bg-white border-zinc-200">
                             {/* Left Column: Core Settings */}
                             <div className="flex-1 p-6 md:p-8 space-y-8 border-b lg:border-b-0 lg:border-r border-zinc-100">
                                 <div className="space-y-6">

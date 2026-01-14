@@ -50,6 +50,21 @@ def upload_company_logo(
     db.refresh(settings)
     return settings
 
+@router.post("/company/letterhead", response_model=CompanySettingsResponse)
+@role_required([UserRole.super_admin])
+def upload_company_letterhead(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    path = upload_file(file, "branding")
+    settings = settings_service.get_company_settings(db)
+    settings.letterhead_url = path
+    db.add(settings)
+    db.commit()
+    db.refresh(settings)
+    return settings
+
 # --- Master Data ---
 
 @router.get("/departments", response_model=List[DepartmentResponse])

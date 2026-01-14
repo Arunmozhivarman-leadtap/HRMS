@@ -57,3 +57,20 @@ export function useUploadCompanyLogo() {
         },
     });
 }
+
+export function useUploadLetterhead() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (file: File) => {
+            const formData = new FormData();
+            formData.append("file", file);
+            return fetcher<any>("/settings/company/letterhead", {
+                method: "POST",
+                body: formData,
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["settings", "company"] });
+        },
+    });
+}

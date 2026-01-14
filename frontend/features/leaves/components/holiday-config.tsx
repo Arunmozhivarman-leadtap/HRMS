@@ -105,6 +105,13 @@ export const HolidayConfig = () => {
     }
 
     const getHolidayTypeBadge = (type: HolidayType) => {
+        if (!type) {
+            return (
+                <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 bg-zinc-50 text-zinc-700 border-zinc-100">
+                    Unknown
+                </Badge>
+            )
+        }
         const styles = {
             [HolidayType.national]: "bg-emerald-50 text-emerald-700 border-emerald-100",
             [HolidayType.festival]: "bg-amber-50 text-amber-700 border-amber-100",
@@ -164,7 +171,7 @@ export const HolidayConfig = () => {
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {holidays.sort((a, b) => a.holiday_date.localeCompare(b.holiday_date)).map((holiday) => (
-                            <Card key={holiday.id} className="border-zinc-200 overflow-hidden group hover:shadow-xl transition-all duration-500 bg-background flex flex-col">
+                            <Card key={holiday.id} className="border shadow-sm rounded-xl overflow-hidden group hover:shadow-md transition-all duration-500 bg-background flex flex-col">
                                 <CardContent className="p-0 flex-1">
                                     <div className="p-5 flex items-center justify-between bg-zinc-50/50 border-b border-zinc-100 transition-colors group-hover:bg-zinc-100/50">
                                         <div className="flex items-center gap-3">
@@ -237,7 +244,7 @@ export const HolidayConfig = () => {
                 onClose={() => setIsOpen(false)}
                 title={editingHoliday ? "Edit Holiday" : "Add New Holiday"}
                 description="Configure holidays for the organization."
-                className="max-w-md"
+                className="max-w-md border shadow-2xl rounded-xl"
             >
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

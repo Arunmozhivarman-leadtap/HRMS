@@ -6,14 +6,11 @@ import { Settings2, CalendarDays } from "lucide-react"
 
 export default function LeaveSettingsPage() {
     return (
-        <div className="max-w-5xl mx-auto space-y-12 pb-20">
-            <div className="flex items-center gap-3 border-b border-border/40 pb-6">
-                <div className="p-2 rounded-xl bg-primary/5 text-primary">
-                    <Settings2 className="h-6 w-6" />
-                </div>
-                <div>
-                    <h2 className="text-2xl font-serif font-medium text-foreground tracking-tight">System Settings</h2>
-                    <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Manage organization-wide configurations.</p>
+        <div className="space-y-12 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-border/40 pb-6">
+                <div className="flex flex-col gap-1">
+                    <h3 className="text-xl font-serif font-medium text-foreground tracking-tight">System Settings</h3>
+                    <p className="text-sm text-muted-foreground">Manage organization-wide leave policies and holiday configurations.</p>
                 </div>
             </div>
 

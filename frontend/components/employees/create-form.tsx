@@ -19,7 +19,7 @@ import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, Eye, EyeOff, Copy } from 
 import { fetcher } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDepartments, useDesignations } from "@/hooks/use-master-data";
+import { useDepartments, useDesignations, useEmploymentTypes } from "@/hooks/use-master-data";
 import { useEmployees } from "@/hooks/use-employee";
 import { useUser } from "@/hooks/use-user";
 import { formatErrorMessage } from "@/lib/utils";
@@ -72,6 +72,7 @@ export function EmployeeCreateForm({ onSuccess }: { onSuccess?: () => void }) {
 
   const { data: departments } = useDepartments();
   const { data: designations } = useDesignations();
+  const { data: employmentTypes } = useEmploymentTypes();
   const { data: employees } = useEmployees({ limit: 1000 });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -267,7 +268,7 @@ export function EmployeeCreateForm({ onSuccess }: { onSuccess?: () => void }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="employment_type" render={({ field }) => (
-                  <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Employment Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Select type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="full-time">Full-time</SelectItem><SelectItem value="part-time">Part-time</SelectItem><SelectItem value="contract">Contract</SelectItem><SelectItem value="intern">Intern</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                  <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Employment Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Select type" /></SelectTrigger></FormControl><SelectContent>{employmentTypes?.map(type => <SelectItem key={type.name} value={type.name}>{type.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="role" render={({ field }) => (
                   <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">System Role</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Select role" /></SelectTrigger></FormControl><SelectContent>{roleOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>

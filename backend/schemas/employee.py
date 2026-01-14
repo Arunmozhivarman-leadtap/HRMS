@@ -52,6 +52,7 @@ class BankingInfoUpdate(BaseModel):
     bank_name: str
     branch_name: str
     account_number: str
+    confirm_account_number: str
     ifsc_code: str
     account_type: str
 

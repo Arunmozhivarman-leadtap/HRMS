@@ -15,13 +15,18 @@ export default async function SettingsLayout({
 
   return (
     <div className="flex-1 relative pb-20">
-      {/* Background Accents */}
+      {/* Background Accents (Subtle geometric grid) */}
       <div className="absolute top-[-20px] right-[-40px] -z-10 opacity-20 pointer-events-none select-none">
         <div className="grid grid-cols-4 grid-rows-4 gap-1">
-          <div className="w-16 h-16 bg-zinc-200/50 rounded-sm"></div>
-          <div className="w-16 h-16 bg-zinc-300/50 rounded-sm"></div>
+          <div className="w-16 h-16 bg-blue-100/50 rounded-sm"></div>
+          <div className="w-16 h-16 bg-indigo-100/50 rounded-sm"></div>
           <div className="w-16 h-16 bg-transparent"></div>
-          <div className="w-16 h-16 bg-zinc-100/50 rounded-sm"></div>
+          <div className="w-16 h-16 bg-blue-50/50 rounded-sm"></div>
+
+          <div className="w-16 h-16 bg-transparent"></div>
+          <div className="w-16 h-16 bg-blue-100/30 rounded-sm"></div>
+          <div className="w-16 h-16 bg-indigo-50/50 rounded-sm"></div>
+          <div className="w-16 h-16 bg-transparent"></div>
         </div>
       </div>
 
@@ -43,8 +48,8 @@ export default async function SettingsLayout({
       </div>
 
       <footer className="mt-20 pt-8 border-t border-muted text-center text-[10px] uppercase tracking-widest text-muted-foreground/60 space-y-1 font-bold">
-        <p>© 2026 LeadTap Digi Solutions. Administration Panel.</p>
-        <p>All configuration changes are logged for security auditing.</p>
+        <p>© 2026 LeadTap Digi Solutions. Data protection compliant.</p>
+        <p>Administration Panel. All configuration changes are logged for security auditing.</p>
       </footer>
     </div>
   );

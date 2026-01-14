@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Save } from "lucide-react";
-import { useDepartments, useDesignations } from "@/hooks/use-master-data";
+import { useDepartments, useDesignations, useEmploymentTypes } from "@/hooks/use-master-data";
 import { useEmployees } from "@/hooks/use-employee";
 import { formatErrorMessage } from "@/lib/utils";
 
@@ -42,6 +42,7 @@ export function EmploymentEditForm({ employee, onSuccess, isAdmin = false }: Emp
     const updateMutation = useUpdateEmployee();
     const { data: departments } = useDepartments();
     const { data: designations } = useDesignations();
+    const { data: employmentTypes } = useEmploymentTypes();
     const { data: employees } = useEmployees({ limit: 1000 });
 
     const form = useForm<z.infer<typeof employmentSchema>>({
@@ -118,7 +119,7 @@ export function EmploymentEditForm({ employee, onSuccess, isAdmin = false }: Emp
                         )} />
 
                         <FormField control={form.control} name="employment_type" render={({ field }) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Employment Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isAdmin}><FormControl><SelectTrigger className="h-10 bg-muted/20"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="full-time">Full-time</SelectItem><SelectItem value="part-time">Part-time</SelectItem><SelectItem value="contract">Contract</SelectItem><SelectItem value="intern">Intern</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Employment Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isAdmin}><FormControl><SelectTrigger className="h-10 bg-muted/20"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent>{employmentTypes?.map(type => <SelectItem key={type.name} value={type.name}>{type.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                         )} />
 
                         <FormField control={form.control} name="manager_id" render={({ field }) => (

@@ -36,6 +36,12 @@ class EmployeeService:
             db, skip, limit, search, department_id, status_filter, manager_id, archived
         )
 
+    def _clean_emp_data(self, data: dict) -> dict:
+        """Converts empty strings to None for specific fields."""
+        if "employee_code" in data and data["employee_code"] == "":
+            data["employee_code"] = None
+        return data
+
     def create_employee(self, db: Session, employee_in: EmployeeCreate, creator_id: int, ip_address: str = None):
         existing_emp = employee_repository.get_employee_by_email(db, employee_in.email)
         if existing_emp:
@@ -46,7 +52,7 @@ class EmployeeService:
             raise HTTPException(status_code=400, detail="User with this email already exists")
 
         # Create Employee
-        emp_data = employee_in.model_dump(exclude={"password"})
+        emp_data = self._clean_emp_data(employee_in.model_dump(exclude={"password"}))
         emp_data["hashed_password"] = get_password_hash(employee_in.password)
         
         db_employee = Employee(**emp_data)
@@ -95,6 +101,7 @@ class EmployeeService:
         else:
             update_data = employee_in.model_dump(exclude_unset=True)
 
+        update_data = self._clean_emp_data(update_data)
         updated_employee = employee_repository.update_employee(db, employee, update_data)
         
         log_action(

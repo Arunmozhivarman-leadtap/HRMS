@@ -90,6 +90,7 @@ class LeaveApplicationResponse(LeaveApplicationCreate):
 class PublicHolidayBase(BaseModel):
     name: str
     holiday_date: date
+    holiday_type: HolidayType
     is_restricted: bool = False
     description: Optional[str] = None
     recurring: bool = False
@@ -100,6 +101,7 @@ class PublicHolidayCreate(PublicHolidayBase):
 class PublicHolidayUpdate(BaseModel):
     name: Optional[str] = None
     holiday_date: Optional[date] = None
+    holiday_type: Optional[HolidayType] = None
     is_restricted: Optional[bool] = None
     description: Optional[str] = None
     recurring: Optional[bool] = None

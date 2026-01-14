@@ -20,3 +20,10 @@ export function useDesignations() {
     });
 }
 
+export function useEmploymentTypes() {
+    return useQuery({
+        queryKey: ["employment-types"],
+        queryFn: () => fetcher<MasterData[]>("/settings/employment-types"),
+    });
+}
+

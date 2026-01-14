@@ -71,7 +71,7 @@ export function CompanyForm({ initialData }: { initialData: any }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70">Legal Entity Name</FormLabel>
-                  <FormControl><Input className="h-12 border-none shadow-sm bg-zinc-100/50 focus:bg-background transition-all" {...field} /></FormControl>
+                  <FormControl><Input className="h-11 bg-background border-border/60 focus:ring-primary/20 transition-all text-sm" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -82,7 +82,7 @@ export function CompanyForm({ initialData }: { initialData: any }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70">Trading Name (Brand)</FormLabel>
-                  <FormControl><Input className="h-12 border-none shadow-sm bg-zinc-100/50 focus:bg-background transition-all" {...field} /></FormControl>
+                  <FormControl><Input className="h-11 bg-background border-border/60 focus:ring-primary/20 transition-all text-sm" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -93,7 +93,7 @@ export function CompanyForm({ initialData }: { initialData: any }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70">Registration Number (CIN/LLP)</FormLabel>
-                  <FormControl><Input className="h-12 border-none shadow-sm bg-zinc-100/50 focus:bg-background transition-all font-mono uppercase" {...field} /></FormControl>
+                  <FormControl><Input className="h-11 bg-background border-border/60 focus:ring-primary/20 transition-all text-sm font-mono uppercase" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -103,28 +103,28 @@ export function CompanyForm({ initialData }: { initialData: any }) {
           <div className="space-y-6">
             <h3 className="text-xl font-serif font-medium">Statutory</h3>
             <div className="grid grid-cols-2 gap-4">
-                <FormField
+              <FormField
                 control={form.control}
                 name="gst_number"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70">GSTIN</FormLabel>
-                    <FormControl><Input className="h-12 border-none shadow-sm bg-zinc-100/50 focus:bg-background transition-all font-mono uppercase" {...field} /></FormControl>
+                    <FormControl><Input className="h-11 bg-background border-border/60 focus:ring-primary/20 transition-all text-sm font-mono uppercase" {...field} /></FormControl>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-                <FormField
+              />
+              <FormField
                 control={form.control}
                 name="pan_number"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70">Company PAN</FormLabel>
-                    <FormControl><Input className="h-12 border-none shadow-sm bg-zinc-100/50 focus:bg-background transition-all font-mono uppercase" {...field} /></FormControl>
+                    <FormControl><Input className="h-11 bg-background border-border/60 focus:ring-primary/20 transition-all text-sm font-mono uppercase" {...field} /></FormControl>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
+              />
             </div>
             <FormField
               control={form.control}
@@ -132,7 +132,7 @@ export function CompanyForm({ initialData }: { initialData: any }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70">PF Registration (EPFO)</FormLabel>
-                  <FormControl><Input className="h-12 border-none shadow-sm bg-zinc-100/50 focus:bg-background transition-all font-mono" {...field} /></FormControl>
+                  <FormControl><Input className="h-11 bg-background border-border/60 focus:ring-primary/20 transition-all text-sm font-mono" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -143,7 +143,7 @@ export function CompanyForm({ initialData }: { initialData: any }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70">ESI Registration (ESIC)</FormLabel>
-                  <FormControl><Input className="h-12 border-none shadow-sm bg-zinc-100/50 focus:bg-background transition-all font-mono" {...field} /></FormControl>
+                  <FormControl><Input className="h-11 bg-background border-border/60 focus:ring-primary/20 transition-all text-sm font-mono" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -152,22 +152,22 @@ export function CompanyForm({ initialData }: { initialData: any }) {
         </div>
 
         <div className="space-y-6 max-w-2xl">
-            <h3 className="text-xl font-serif font-medium">Address</h3>
-            <FormField
-              control={form.control}
-              name="registered_address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70">Registered Office Address</FormLabel>
-                  <FormControl><Textarea rows={4} className="border-none shadow-sm bg-zinc-100/50 focus:bg-background transition-all rounded-2xl p-4" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <h3 className="text-xl font-serif font-medium">Address</h3>
+          <FormField
+            control={form.control}
+            name="registered_address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/70">Registered Office Address</FormLabel>
+                <FormControl><Textarea rows={4} className="bg-background border border-border/60 focus:ring-primary/20 transition-all rounded-xl p-4 text-sm" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <div className="flex justify-start">
-          <Button type="submit" disabled={updateMutation.isPending} className="h-14 px-10 rounded-2xl shadow-lg hover:shadow-xl transition-all font-bold uppercase tracking-widest text-[10px]">
+          <Button type="submit" disabled={updateMutation.isPending} className="h-12 px-10 rounded-xl shadow-md active:scale-95 transition-all font-bold uppercase tracking-widest text-[10px]">
             {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Organizational Settings
           </Button>

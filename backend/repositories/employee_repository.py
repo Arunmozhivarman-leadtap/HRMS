@@ -57,7 +57,11 @@ class EmployeeRepository:
     def update_employee(self, db: Session, employee: Employee, obj_in: dict) -> Employee:
         for field in obj_in:
             if hasattr(employee, field):
-                setattr(employee, field, obj_in[field])
+                val = obj_in[field]
+                # Handle empty strings for unique or nullable fields
+                if field == "employee_code" and val == "":
+                    val = None
+                setattr(employee, field, val)
         db.add(employee)
         db.commit()
         db.refresh(employee)
