@@ -14,7 +14,7 @@ export function Logo({ className }: { className?: string }) {
         <img
           src={logoUrl}
           alt={settings?.company_name || "Company Logo"}
-          className="h-8 w-auto object-contain"
+          className="h-auto w-[60px] object-contain"
           onError={(e) => {
             // Fallback if image fails to load
             e.currentTarget.style.display = 'none';
@@ -51,7 +51,7 @@ export function Logo({ className }: { className?: string }) {
         </svg>
       )}
       <span className="text-xl font-bold tracking-tight text-foreground">
-        {settings?.company_name ? settings.company_name.split(' ')[0] : "HRMS"}.ai
+        {settings?.company_name ? settings.company_name.split(' ')[0] : "HRMS"}
       </span>
     </div>
   );

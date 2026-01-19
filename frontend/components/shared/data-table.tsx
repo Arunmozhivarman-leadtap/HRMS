@@ -148,13 +148,15 @@ export function DataTable<TData, TValue>({
                     </TableBody>
                 </Table>
             </div>
-            <PaginationControls
-                pageIndex={pageIndex}
-                pageSize={pageSize}
-                totalCount={totalCount}
-                onPageChange={onPageChange}
-                onPageSizeChange={onPageSizeChange}
-            />
+            {totalCount > pageSize && !isLoading && (
+                <PaginationControls
+                    pageIndex={pageIndex}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={onPageChange}
+                    onPageSizeChange={onPageSizeChange}
+                />
+            )}
         </div>
     )
 }

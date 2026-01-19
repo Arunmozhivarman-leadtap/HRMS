@@ -15,18 +15,27 @@ export function SendOfferDialog({ candidate, open, onOpenChange }: { candidate: 
     const { toast } = useToast()
     const queryClient = useQueryClient()
     const [expiryDays, setExpiryDays] = useState(7)
+    const [offerFile, setOfferFile] = useState<File | null>(null)
     const [offerLink, setOfferLink] = useState<string | null>(null)
     const [copied, setCopied] = useState(false)
 
     const sendMutation = useMutation({
-        mutationFn: (data: { expiry_days: number }) => fetcher(`/onboarding/candidates/${candidate.id}/offer`, {
-            method: "POST",
-            body: JSON.stringify(data)
-        }),
+        mutationFn: async (data: { expiry_days: number, file: File | null }) => {
+            const formData = new FormData()
+            formData.append("expiry_days", data.expiry_days.toString())
+            if (data.file) {
+                formData.append("file", data.file)
+            }
+            
+            return fetcher(`/onboarding/candidates/${candidate.id}/offer`, {
+                method: "POST",
+                body: formData
+            })
+        },
         onSuccess: (res: any) => {
             queryClient.invalidateQueries({ queryKey: ["candidates"] })
             setOfferLink(res.link)
-            toast({ title: "Offer Generated", description: "The candidate will receive an email with the link." })
+            toast({ title: "Offer Sent", description: "Email sent to candidate with access link." })
         }
     })
 
@@ -58,8 +67,8 @@ export function SendOfferDialog({ candidate, open, onOpenChange }: { candidate: 
                                 <Mail className="h-6 w-6" />
                             </div>
                             <div className="space-y-1">
-                                <h4 className="font-serif font-bold text-lg text-emerald-900">Link Ready!</h4>
-                                <p className="text-xs text-emerald-700/80 font-medium">An automated email is queued for {candidate.personal_email}.</p>
+                                <h4 className="font-serif font-bold text-lg text-emerald-900">Offer Sent!</h4>
+                                <p className="text-xs text-emerald-700/80 font-medium">An automated email has been sent to {candidate.personal_email}.</p>
                             </div>
                         </div>
 
@@ -106,18 +115,28 @@ export function SendOfferDialog({ candidate, open, onOpenChange }: { candidate: 
                             </div>
                         </div>
 
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Offer Letter (PDF/DOCX)</Label>
+                            <Input 
+                                type="file" 
+                                onChange={(e) => setOfferFile(e.target.files?.[0] || null)}
+                                className="h-11 rounded-xl bg-zinc-50 file:py-2 file:px-4 file:rounded-full file:bg-blue-50 file:text-blue-700 file:font-bold file:border-none file:mr-4 file:text-xs"
+                                accept=".pdf,.docx,.doc"
+                            />
+                        </div>
+
                         <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl flex gap-3">
                             <FileText className="h-5 w-5 text-blue-600 shrink-0" />
-                            <p className="text-[11px] text-blue-800 leading-relaxed font-medium">The system will generate a PDF offer based on the salary structure defined in the candidate profile.</p>
+                            <p className="text-[11px] text-blue-800 leading-relaxed font-medium">Upload the signed offer letter. The candidate will be able to view and download this before accepting.</p>
                         </div>
 
                         <Button 
                             className="w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all"
-                            onClick={() => sendMutation.mutate({ expiry_days: expiryDays })}
-                            disabled={sendMutation.isPending}
+                            onClick={() => sendMutation.mutate({ expiry_days: expiryDays, file: offerFile })}
+                            disabled={sendMutation.isPending || !offerFile}
                         >
                             {sendMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
-                            Generate & Send Offer Link
+                            Send Offer Link
                         </Button>
                     </div>
                 )}

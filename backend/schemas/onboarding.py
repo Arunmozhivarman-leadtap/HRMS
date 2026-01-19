@@ -43,6 +43,8 @@ class CandidateResponse(CandidateBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     offer_token_expiry: Optional[datetime] = None
+    onboarding_progress: float = 0.0
+    missing_required_items: List[str] = []
 
     class Config:
         from_attributes = True
@@ -70,3 +72,23 @@ class OnboardingTaskResponse(BaseModel):
     status: str
     required: bool
     uploaded_file: Optional[str] = None
+
+class OnboardingChecklistItemSchema(BaseModel):
+    id: int
+    name: str
+    category: str
+    required: bool
+
+    class Config:
+        from_attributes = True
+
+class OnboardingTaskDetail(BaseModel):
+    id: int
+    candidate_id: int
+    checklist_item_id: int
+    status: str
+    uploaded_file: Optional[str] = None
+    checklist_item: OnboardingChecklistItemSchema
+
+    class Config:
+        from_attributes = True

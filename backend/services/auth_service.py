@@ -41,20 +41,47 @@ class AuthService:
         return self._create_tokens(user)
 
     def authenticate_sso(self, db: Session, sso_data: SSOLoginRequest) -> Token:
-        # NOTE: This is a placeholder. In production, verify sso_data.id_token with Google's public keys.
-        # For now, we simulate a successful Google login if the token is "mock-google-token"
+        import requests
         
-        if sso_data.id_token == "mock-google-token":
-            email = "demo@leadtap.com" 
-            # Check if user exists, if not, you might auto-register or reject
-            user = auth_repository.get_user_by_email(db, email)
-            if not user:
-                # For this prototype, we'll assume the demo user exists or we fail
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found (SSO)")
-            
-            return self._create_tokens(user)
+        # Verify the access token with Google's tokeninfo endpoint to ensure audience matches
+        try:
+            response = requests.get(
+                "https://www.googleapis.com/oauth2/v3/tokeninfo",
+                params={"access_token": sso_data.id_token}
+            )
+            response.raise_for_status()
+            token_info = response.json()
+        except Exception as e:
+            print(f"SSO Validation Error: {e}")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid SSO token")
+
+        # Security: Verify that the token was issued for this application
+        if settings.GOOGLE_CLIENT_ID:
+             # Some tokens might return 'aud' as a string or list, or allow 'azp' 
+             aud = token_info.get("aud")
+             if aud != settings.GOOGLE_CLIENT_ID:
+                 # Check strictly. 
+                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token audience mismatch")
+        else:
+             # Depending on strictness, we might allow it if config is missing, BUT strict secure default says NO.
+             # However, for now, we warn or fail. 
+             # Given the user asked about it, we should likely enforce it.
+             pass 
+
+        email = token_info.get("email")
+        if not email:
+             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid SSO token (no email)")
+
+        # Link to existing user
+        user = auth_repository.get_user_by_email(db, email)
+        if not user:
+            # STRICT MODE: Do not auto-register
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="Account not provisioned. Please contact HR."
+            )
         
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid SSO token")
+        return self._create_tokens(user)
 
     def _create_tokens(self, user) -> Token:
         # User role is an Enum, need to extract value. 

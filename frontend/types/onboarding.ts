@@ -25,12 +25,14 @@ export interface CandidateResponse {
     created_at: string;
     updated_at?: string;
     offer_token_expiry?: string;
+    onboarding_progress: number;
+    missing_required_items: string[];
 }
 
 export interface PortalAccessResponse {
     candidate: CandidateResponse;
     checklist: OnboardingTask[];
-    offer_valid: bool;
+    offer_valid: boolean;
 }
 
 export interface OnboardingTask {
@@ -40,4 +42,20 @@ export interface OnboardingTask {
     required: boolean;
     status: "pending" | "completed";
     uploaded_file?: string | null;
+}
+
+export interface OnboardingChecklistItem {
+    id: number;
+    name: string;
+    category: string;
+    required: boolean;
+}
+
+export interface OnboardingTaskDetail {
+    id: number;
+    candidate_id: number;
+    checklist_item_id: number;
+    status: string;
+    uploaded_file?: string;
+    checklist_item: OnboardingChecklistItem;
 }

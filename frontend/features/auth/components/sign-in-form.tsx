@@ -7,6 +7,7 @@ import * as z from "zod"
 import { Loader2, ArrowRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMutation } from "@tanstack/react-query"
+import { useGoogleLogin } from "@react-oauth/google"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -53,20 +54,26 @@ export function SignInForm({ className, ...props }: React.HTMLAttributes<HTMLDiv
       router.push("/dashboard")
     },
   })
-  
+
   const googleLoginMutation = useMutation({
-    mutationFn: async () => {
-        // In a real app, this would use the Google Identity Services SDK to get the ID Token
-        const mockIdToken = "mock-google-token"
-        
-        return fetcher("/auth/google", {
-            method: "POST",
-            body: JSON.stringify({ id_token: mockIdToken, provider: "google" }),
-        })
+    mutationFn: async (accessToken: string) => {
+      return fetcher("/auth/google", {
+        method: "POST",
+        body: JSON.stringify({ id_token: accessToken, provider: "google" }),
+      })
     },
     onSuccess: () => {
-        router.push("/dashboard")
+      router.push("/dashboard")
     },
+  })
+
+  const startGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      googleLoginMutation.mutate(tokenResponse.access_token)
+    },
+    onError: () => {
+      console.error("Google Login Failed");
+    }
   })
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -84,15 +91,15 @@ export function SignInForm({ className, ...props }: React.HTMLAttributes<HTMLDiv
               <FormItem className="space-y-1">
                 <FormLabel className="text-sm font-medium text-foreground/80">Work Email</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="name@leadtap.com" 
-                    type="email" 
-                    autoCapitalize="none" 
-                    autoComplete="email" 
-                    autoCorrect="off" 
+                  <Input
+                    placeholder="name@leadtap.com"
+                    type="email"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    autoCorrect="off"
                     disabled={loginMutation.isPending || googleLoginMutation.isPending}
                     className="h-12 bg-muted/30 border-input/60 focus:bg-background transition-colors"
-                    {...field} 
+                    {...field}
                   />
                 </FormControl>
                 <FormMessage />
@@ -111,25 +118,25 @@ export function SignInForm({ className, ...props }: React.HTMLAttributes<HTMLDiv
                   </a>
                 </div>
                 <FormControl>
-                  <Input 
-                    type="password" 
-                    placeholder="••••••••" 
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
                     autoComplete="current-password"
                     disabled={loginMutation.isPending || googleLoginMutation.isPending}
                     className="h-12 bg-muted/30 border-input/60 focus:bg-background transition-colors"
-                    {...field} 
+                    {...field}
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          
+
           {(loginMutation.isError || googleLoginMutation.isError) && (
             <div className="text-sm text-destructive font-medium px-1">
-              {loginMutation.error instanceof ApiError ? loginMutation.error.message : 
-               googleLoginMutation.error instanceof ApiError ? googleLoginMutation.error.message : 
-               "Authentication failed. Please check credentials or try again."}
+              {loginMutation.error instanceof ApiError ? loginMutation.error.message :
+                googleLoginMutation.error instanceof ApiError ? googleLoginMutation.error.message :
+                  "Authentication failed. Please check credentials or try again."}
             </div>
           )}
 
@@ -142,17 +149,17 @@ export function SignInForm({ className, ...props }: React.HTMLAttributes<HTMLDiv
       </Form>
 
       <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-muted" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
-            </span>
-          </div>
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-muted" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">
+            Or continue with
+          </span>
+        </div>
       </div>
-      
-      <Button variant="outline" type="button" disabled={googleLoginMutation.isPending || loginMutation.isPending} onClick={() => googleLoginMutation.mutate()} className="w-full h-12">
+
+      <Button variant="outline" type="button" disabled={googleLoginMutation.isPending || loginMutation.isPending} onClick={() => startGoogleLogin()} className="w-full h-12">
         {googleLoginMutation.isPending ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
@@ -162,8 +169,8 @@ export function SignInForm({ className, ...props }: React.HTMLAttributes<HTMLDiv
         )}
         Sign in with Google
       </Button>
-      
-      
+
+
     </div>
   )
 }

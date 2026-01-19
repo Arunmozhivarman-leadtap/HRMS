@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Calendar as Cal
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWeekend, isToday, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
-import { Tooltip } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export const TeamLeaveCalendar = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -23,7 +23,7 @@ export const TeamLeaveCalendar = () => {
     const teamMembers = useMemo(() => {
         if (!teamBalances) return []
         // Extract unique team members from balances
-        return teamBalances.map(b => ({
+        return teamBalances.items.map(b => ({
             id: b.employee_id,
             name: b.employee?.full_name || `Employee ${b.employee_id}`
         })).filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
@@ -31,7 +31,7 @@ export const TeamLeaveCalendar = () => {
 
     const getLeaveStatus = (employeeId: number, date: Date) => {
         if (!applications) return null
-        return applications.find(app => {
+        return applications.items.find(app => {
             if (app.employee_id !== employeeId) return false
             if (!['approved', 'pending'].includes(app.status)) return false
 
@@ -221,47 +221,62 @@ export const TeamLeaveCalendar = () => {
                                                     current && "bg-primary/5 shadow-[inset_0_0_0_1px_rgba(var(--primary),0.1)]"
                                                 )}
                                             >
-                                                <Tooltip
-                                                    content={
-                                                        (leave || holiday) ? (
-                                                            <div className="space-y-1.5 min-w-[150px]">
-                                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                                                    {leave ? "Leave Details" : "Public Holiday"}
-                                                                </p>
-                                                                <p className="text-sm font-serif font-bold text-foreground">
-                                                                    {leave ? leave.leave_type_name : holiday?.name}
-                                                                </p>
-                                                                {leave && (
-                                                                    <>
-                                                                        <p className="text-[11px] text-zinc-500 italic max-w-[200px]">
-                                                                            "{leave.reason}"
-                                                                        </p>
-                                                                        <Badge variant="outline" className={cn(
-                                                                            "mt-1 text-[9px] font-bold uppercase py-0 px-2",
-                                                                            leave.status === 'approved' ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
-                                                                        )}>
-                                                                            {leave.status}
-                                                                        </Badge>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        ) : null
-                                                    }
-                                                >
-                                                    <div className={cn(
-                                                        "h-full rounded-md transition-all duration-300 transform cursor-default w-full flex items-center justify-center text-[10px] font-bold",
-                                                        leave?.status === 'approved' && "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:scale-105",
-                                                        leave?.status === 'pending' && "bg-amber-400 text-amber-900 shadow-lg shadow-amber-400/20 hover:scale-105",
-                                                        holiday && "bg-zinc-200 text-zinc-600 border border-zinc-300 shadow-sm hover:scale-105",
-                                                        !leave && !holiday && weekend && "bg-zinc-100/30 border border-zinc-100/50 border-dashed"
-                                                    )}>
-                                                        {leave ? (
-                                                            (leave.leave_type_name || 'LV').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-                                                        ) : holiday ? (
-                                                            "PH"
-                                                        ) : null}
-                                                    </div>
-                                                </Tooltip>
+                                                {(() => {
+                                                    const tooltipContent = (leave || holiday) ? (
+                                                        <div className="space-y-1.5 min-w-[150px]">
+                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                                                {leave ? "Leave Details" : "Public Holiday"}
+                                                            </p>
+                                                            <p className="text-sm font-serif font-bold text-foreground">
+                                                                {leave ? leave.leave_type_name : holiday?.name}
+                                                            </p>
+                                                            {leave && (
+                                                                <>
+                                                                    <p className="text-[11px] text-zinc-500 italic max-w-[200px]">
+                                                                        "{leave.reason}"
+                                                                    </p>
+                                                                    <Badge variant="outline" className={cn(
+                                                                        "mt-1 text-[9px] font-bold uppercase py-0 px-2",
+                                                                        leave.status === 'approved' ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
+                                                                    )}>
+                                                                        {leave.status}
+                                                                    </Badge>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    ) : null
+
+                                                    const cellContent = (
+                                                        <div className={cn(
+                                                            "h-full rounded-md transition-all duration-300 transform cursor-default w-full flex items-center justify-center text-[10px] font-bold",
+                                                            leave?.status === 'approved' && "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:scale-105",
+                                                            leave?.status === 'pending' && "bg-amber-400 text-amber-900 shadow-lg shadow-amber-400/20 hover:scale-105",
+                                                            holiday && "bg-zinc-200 text-zinc-600 border border-zinc-300 shadow-sm hover:scale-105",
+                                                            !leave && !holiday && weekend && "bg-zinc-100/30 border border-zinc-100/50 border-dashed"
+                                                        )}>
+                                                            {leave ? (
+                                                                (leave.leave_type_name || 'LV').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+                                                            ) : holiday ? (
+                                                                "PH"
+                                                            ) : null}
+                                                        </div>
+                                                    )
+
+                                                    if (!tooltipContent) return cellContent
+
+                                                    return (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    {cellContent}
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    {tooltipContent}
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    )
+                                                })()}
                                             </td>
                                         )
                                     })}

@@ -1,7 +1,6 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import { usePortalData, useRespondOffer, useUploadOnboardingDoc } from "../../hooks/use-onboarding"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -11,6 +10,7 @@ import { Logo } from "@/components/ui/logo"
 import { cn } from "@/lib/utils"
 import { useState, useRef } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { usePortalData, useRespondOffer, useUploadOnboardingDoc } from "@/features/onboarding/hooks/use-onboarding"
 
 export default function CandidatePortalPage() {
     const params = useParams()
@@ -64,34 +64,29 @@ export default function CandidatePortalPage() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file && selectedTaskId) {
-            // Need to pass candidate_id to uploadMutation
-            const formData = new FormData()
-            formData.append("file", file)
-            formData.append("candidate_id", candidate.id.toString())
-            formData.append("checklist_item_id", selectedTaskId.toString())
-
-            // I'll call fetcher directly or update hook to accept more params
-            // Let's call fetcher directly for simplicity in this turn or update hook
-            // Actually I'll call the mutation withtaskId and file, and the hook handles candidate_id internally via closure or params.
-            // Let's update the hook to accept candidate_id.
-            
-            // I'll use fetcher directly to avoid another hook update round
-            const upload = async () => {
-                try {
-                    await fetcher("/onboarding/documents/upload", {
-                        method: "POST",
-                        body: formData
-                    })
+            uploadMutation.mutate({ taskId: selectedTaskId, file }, {
+                onSuccess: () => {
                     toast({ title: "Upload Success", description: "Document has been received." })
-                    // Refresh data
-                    window.location.reload() // Quick fix for refresh, ideally use query invalidation
-                } catch (err: any) {
+                },
+                onError: (err: any) => {
                     toast({ title: "Upload Failed", description: err.message, variant: "destructive" })
                 }
+            })
+            // Reset input
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ""
             }
-            upload()
         }
     }
+
+    const getFileUrl = (path?: string) => {
+        if (!path) return "#"
+        // Remove "uploads/" prefix if path already has it (safety check)
+        const cleanPath = path.startsWith("uploads/") ? path.replace("uploads/", "") : path;
+        return `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/uploads/${cleanPath}`
+    }
+
+    const offerDocPath = candidate.salary_structure?.offer_document
 
     return (
         <div className="min-h-screen bg-zinc-50/50">
@@ -157,7 +152,15 @@ export default function CandidatePortalPage() {
                                 <div className="text-center space-y-4">
                                     <FileText className="h-16 w-12 text-zinc-400 mx-auto" />
                                     <p className="text-sm font-medium text-zinc-500">Offer Letter PDF Preview</p>
-                                    <Button variant="outline" className="rounded-full font-bold">Download Copy</Button>
+                                    {offerDocPath ? (
+                                        <Button variant="outline" className="rounded-full font-bold" asChild>
+                                            <a href={getFileUrl(offerDocPath)} target="_blank" rel="noopener noreferrer">
+                                                Download Copy
+                                            </a>
+                                        </Button>
+                                    ) : (
+                                        <p className="text-xs text-destructive">Offer document not available</p>
+                                    )}
                                 </div>
                             </div>
                             <div className="p-6 md:p-8 flex flex-col sm:flex-row gap-4 justify-end bg-white">

@@ -41,6 +41,21 @@ class Candidate(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    @property
+    def onboarding_progress(self):
+        if not self.onboarding_tasks:
+            return 0.0
+        total = len(self.onboarding_tasks)
+        completed = len([t for t in self.onboarding_tasks if t.status == 'completed'])
+        return (completed / total) * 100 if total > 0 else 0.0
+
+    @property
+    def missing_required_items(self):
+        if not self.onboarding_tasks:
+            return []
+        # Return names of required tasks that are pending
+        return [t.checklist_item.name for t in self.onboarding_tasks if t.checklist_item.required and t.status != 'completed']
+
 class OnboardingChecklistItem(Base):
     __tablename__ = "onboarding_checklist_items"
 

@@ -16,7 +16,7 @@ import { usePagination } from "@/hooks/use-pagination"
 
 export default function EmployeeLeavesPage() {
     const [isCreditDialogOpen, setIsCreditDialogOpen] = useState(false)
-    const pagination = usePagination(10)
+    const pagination = usePagination(5)
 
     const { data: balances, isLoading: isLoadingBalances } = useMyLeaveBalances()
     const { data: applications, isLoading: isLoadingApps } = useMyLeaveApplications({

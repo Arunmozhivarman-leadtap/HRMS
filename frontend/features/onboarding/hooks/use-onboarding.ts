@@ -1,12 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetcher } from "@/lib/api";
-import { PortalAccessResponse, CandidateResponse } from "@/types/onboarding"; // I will create these types next
+import { PortalAccessResponse, CandidateResponse, OnboardingTaskDetail } from "@/types/onboarding";
 
 export function usePortalData(token: string) {
     return useQuery({
         queryKey: ["onboarding-portal", token],
         queryFn: () => fetcher<PortalAccessResponse>(`/onboarding/portal/${token}`),
         enabled: !!token,
+    });
+}
+
+export function useCandidateTasks(candidateId: number) {
+    return useQuery({
+        queryKey: ["candidate-tasks", candidateId],
+        queryFn: () => fetcher<OnboardingTaskDetail[]>(`/onboarding/candidates/${candidateId}/tasks`),
+        enabled: !!candidateId,
     });
 }
 
@@ -49,18 +57,12 @@ export function useUploadOnboardingDoc(token: string) {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async ({ taskId, file }: { taskId: number; file: File }) => {
-            // We reuse the existing upload endpoint but we need to pass candidate_id or token
-            // The backend endpoint /onboarding/documents/upload expects candidate_id and checklist_item_id
-            // However, the portal is token-based. I should probably add a token-based upload or 
-            // ensure the candidate_id is available from portal data.
-            // Let's check portal data structure again.
-            
             const formData = new FormData();
             formData.append("file", file);
             formData.append("checklist_item_id", taskId.toString());
-            // candidate_id will be appended in the component call where it's available
             
-            return fetcher("/onboarding/documents/upload", {
+            // Use the token-based endpoint
+            return fetcher(`/onboarding/portal/${token}/upload`, {
                 method: "POST",
                 body: formData,
             });
