@@ -9,6 +9,7 @@ import { Upload, ImageIcon, FileCheck, ExternalLink } from "lucide-react";
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { getPhotoUrl } from "@/lib/utils";
+import Image from "next/image";
 
 export default function CompanySettingsPage() {
   const { data: settings, isLoading } = useCompanySettings();
@@ -86,7 +87,7 @@ export default function CompanySettingsPage() {
               <div className="flex flex-col items-center gap-6">
                 <div className="h-40 w-40 bg-zinc-800 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-zinc-700 shadow-inner">
                   {logoUrl ? (
-                    <img src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain p-4" />
+                    <Image src={logoUrl} width={200} height={200} alt="Logo" className="max-h-full max-w-full object-contain p-4" />
                   ) : (
                     <ImageIcon className="h-12 w-12 text-zinc-600" />
                   )}

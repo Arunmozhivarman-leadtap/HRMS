@@ -1,9 +1,10 @@
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, UploadFile
 
+from pathlib import Path
 from backend.models.candidate import Candidate, CandidateStatus, CandidateOnboardingTask, OnboardingChecklistItem
 from backend.models.employee import Employee
 from backend.models.user import User, UserRole
@@ -14,7 +15,7 @@ from backend.services.email_service import email_service
 from backend.schemas.employee import EmployeeCreate
 from backend.core.config import settings
 from backend.utils.audit import log_action
-from backend.utils.file_storage import upload_file
+from backend.utils.file_storage import upload_file, get_file_path
 
 class OnboardingService:
     
@@ -67,78 +68,102 @@ class OnboardingService:
             db.add(task)
         db.commit()
 
-    def generate_offer_link(self, db: Session, candidate_id: int, expiry_days: int = 7, user_id: int = 0, offer_file: UploadFile = None) -> str:
+    def generate_offer_link(self, db: Session, candidate_id: int, expiry_days: int, user_id: int, hr_name: str, hr_email: str, offer_file: Optional[UploadFile] = None) -> str:
         candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
         if not candidate:
             raise HTTPException(status_code=404, detail="Candidate not found")
         
         token = secrets.token_urlsafe(32)
         candidate.offer_token = token
-        candidate.offer_token_expiry = datetime.utcnow() + timedelta(days=expiry_days)
+        candidate.offer_token_expiry = datetime.now(timezone.utc) + timedelta(days=expiry_days)
         candidate.status = CandidateStatus.sent
         
+        attachments = []
+
         # Handle Offer File Upload
         if offer_file:
             # Save properly
             sub_folder = f"candidates/{candidate.id}/offer"
             relative_path = upload_file(offer_file, sub_folder)
             
-            # Ideally store this path in Candidate model or a specific Task
-            # For MVP, we can attach it to the "Accept Offer Letter" task if we want it downloadable there,
-            # OR create a new field in Candidate. The schema has no 'offer_letter_path'. 
-            # Let's attach it to the "Accept Offer Letter" task as 'uploaded_file' might be confusing (usually that's USER upload).
-            # But wait, the USER needs to SEE it.
-            # Best way: A dedicated field `offer_letter_path` on Candidate.
-            # I will modify the model if needed, but since I can't easily run migrations now without alembic setup/time...
-            # I will use the `notes` field to store the path temporarily OR
-            # Just rely on convention: `candidates/{id}/offer/filename`
-            # Actually, `Candidate` model in `backend/models/candidate.py` has no file path.
-            # I'll update the "Accept Offer Letter" task to contain the file path? 
-            # No, that's for what THEY upload (signed copy).
-            
-            # Let's assume we just overwrite the task's file for now, acting as the "Reference".
-            # Or better, I'll return the path so the frontend can display it, but I need to persist it.
-            # I will just log it for now and assume the frontend asks for it via standard path convention or I add a column.
-            # Adding a column is risky without migration.
-            # Let's use `salary_structure` JSON field to store metadata like `{"offer_file": "..."}` if needed.
+            # Store metadata
             if not candidate.salary_structure:
                 candidate.salary_structure = {}
             if isinstance(candidate.salary_structure, dict):
                  candidate.salary_structure["offer_document"] = relative_path
+            
+            # Add to attachments
+            try:
+                abs_path = get_file_path(relative_path)
+                attachments.append(abs_path)
+            except Exception as e:
+                print(f"Error resolving attachment path: {e}")
         
         db.commit()
         
-        # Send Email
-        link = f"{settings.API_V1_STR}/onboarding/portal/{token}" # Needs frontend URL actually.
+        # Fetch Dynamic Details for Email
+        from backend.models.settings import CompanySettings, EmploymentType
+        from backend.models.master_data import Designation
+        
+        company_settings = db.query(CompanySettings).first()
+        company_name = company_settings.company_name if company_settings else "LeadTap Digi Solutions"
+        
+        designation = db.query(Designation).filter(Designation.id == candidate.designation_id).first()
+        position_name = designation.name if designation else "Employee"
+
+        # Offer Expiry Date String
+        expiry_date_str = candidate.offer_token_expiry.strftime("%d %b %Y")
+        
+        # Construct Link
         # Assuming frontend is hosted at same domain root or configured.
-        # Let's assume localhost:3000 for dev or relative.
+        # Ideally this comes from settings.FRONTEND_URL, defaulting to localhost for dev.
         frontend_link = f"http://localhost:3000/onboarding/{token}"
         
+        # Spec 2.0 Email Template
+        email_subject = f"Offer of Employment - {position_name} at {company_name}"
+        
         email_body = f"""
-        Dear {candidate.full_name},
-        
-        We are pleased to offer you a position at LeadTap Digi Solutions.
-        Please review your offer letter and complete the onboarding formalities at the link below:
-        
-        {frontend_link}
-        
-        This link expires in {expiry_days} days.
-        
-        Regards,
-        HR Team
+Dear {candidate.full_name},
+
+We are pleased to inform you that you have been selected for the
+position
+of {position_name} at {company_name}.
+
+Please find attached your offer letter with complete details of your
+compensation and terms of employment.
+
+To view and accept your offer, please click the link below:
+
+{frontend_link}
+
+This offer is valid until {expiry_date_str}.
+
+If you have any questions, please don't hesitate to contact
+{hr_name}
+at {hr_email}.
+
+We look forward to welcoming you to the team!
+
+Best regards,
+{hr_name}
+Human Resources
+{company_name}
         """
         
-        email_service.send_email(candidate.personal_email, "Job Offer from LeadTap", email_body)
+        # Send Email (with attachments if any)
+        email_service.send_email(candidate.personal_email, email_subject, email_body, attachments=attachments)
 
-        log_action(db, user_id, "SEND_OFFER", "Candidate", candidate.id, {"expiry_days": expiry_days})
+        log_action(db, user_id, "SEND_OFFER", "Candidate", candidate.id, {"expiry_days": expiry_days, "hr_name": hr_name})
         return token
+
+
 
     def get_candidate_by_token(self, db: Session, token: str) -> Candidate:
         candidate = db.query(Candidate).filter(Candidate.offer_token == token).first()
         if not candidate:
             raise HTTPException(status_code=404, detail="Invalid offer token")
         
-        if candidate.offer_token_expiry and candidate.offer_token_expiry < datetime.utcnow():
+        if candidate.offer_token_expiry and candidate.offer_token_expiry < datetime.now(timezone.utc):
              raise HTTPException(status_code=400, detail="Offer link has expired")
              
         return candidate
@@ -158,13 +183,30 @@ class OnboardingService:
             
         db.commit()
 
-        # Notify HR
-        # In a real app, you'd fetch HR Admin emails. For now, sending to a default or logging.
-        email_service.send_email(
-            settings.SMTP_FROM_EMAIL, # Self-notification or to specific HR group email
-            f"Offer Accepted: {candidate.full_name}",
-            f"Candidate {candidate.full_name} has accepted the offer. Onboarding checklist is now active."
-        )
+        # Notify HR and Creator
+        recipients = {settings.SMTP_FROM_EMAIL} # Default HR/Admin email
+
+        # Find Creator via Audit Log
+        from backend.models.audit import AuditLog
+        from backend.models.user import User
+        
+        creator_log = db.query(AuditLog).filter(
+            AuditLog.entity_type == "Candidate",
+            AuditLog.entity_id == candidate.id,
+            AuditLog.action == "CREATE"
+        ).first()
+        
+        if creator_log:
+            creator_user = db.query(User).filter(User.id == creator_log.user_id).first()
+            if creator_user and creator_user.email:
+                recipients.add(creator_user.email)
+
+        for email in recipients:
+            email_service.send_email(
+                email,
+                f"Offer Accepted: {candidate.full_name}",
+                f"Candidate {candidate.full_name} has accepted the offer. Onboarding checklist is now active."
+            )
 
         return candidate
 
@@ -199,13 +241,21 @@ class OnboardingService:
                 "uploaded_file": t.uploaded_file
             })
             
+        # Fetch Company Settings
+        from backend.models.settings import CompanySettings
+        company_settings = db.query(CompanySettings).first()
+        company_name = company_settings.company_name if company_settings else "LeadTap Digi Solutions"
+        logo_url = company_settings.logo_url if company_settings and hasattr(company_settings, 'logo_url') else None
+
         return {
             "candidate": candidate,
             "checklist": checklist,
-            "offer_valid": True
+            "offer_valid": True,
+            "company_name": company_name,
+            "logo_url": logo_url
         }
 
-    def upload_document_via_token(self, db: Session, token: str, checklist_item_id: int, file: UploadFile) -> str:
+    def upload_document_via_token(self, db: Session, token: str, task_id: int, file: UploadFile) -> str:
         candidate = self.get_candidate_by_token(db, token) # Validates token and expiry
         
         # Validate file
@@ -219,8 +269,8 @@ class OnboardingService:
 
         # Update task
         task = db.query(CandidateOnboardingTask).filter(
-            CandidateOnboardingTask.candidate_id == candidate.id,
-            CandidateOnboardingTask.checklist_item_id == checklist_item_id
+            CandidateOnboardingTask.id == task_id,
+            CandidateOnboardingTask.candidate_id == candidate.id
         ).first()
 
         if task:
@@ -229,15 +279,7 @@ class OnboardingService:
             db.commit()
             db.refresh(task)
         else:
-             # Should not happen if initialized correctly, but safe fallback
-            task = CandidateOnboardingTask(
-                candidate_id=candidate.id,
-                checklist_item_id=checklist_item_id,
-                uploaded_file=relative_path,
-                status="completed"
-            )
-            db.add(task)
-            db.commit()
+             raise HTTPException(status_code=404, detail="Task not found for this candidate")
             
         return relative_path
 

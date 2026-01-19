@@ -43,11 +43,13 @@ def create_candidate(
 def send_offer_letter(
     id: int,
     expiry_days: int = Form(7),
+    hr_name: str = Form(...),
+    hr_email: str = Form(...),
     file: Optional[UploadFile] = File(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    token = onboarding_service.generate_offer_link(db, id, expiry_days, current_user.id, file)
+    token = onboarding_service.generate_offer_link(db, id, expiry_days, current_user.id, hr_name, hr_email, file)
     return {"message": "Offer generated successfully", "token": token, "link": f"/onboarding/{token}"}
 
 @router.post("/candidates/{id}/convert", status_code=status.HTTP_201_CREATED)
@@ -69,7 +71,19 @@ def get_candidate_tasks(
 ):
     # Fetch tasks with item details
     tasks = db.query(CandidateOnboardingTask).options(joinedload(CandidateOnboardingTask.checklist_item)).filter(CandidateOnboardingTask.candidate_id == id).all()
-    return tasks
+    
+    # Flatten response to match OnboardingTaskDetail schema
+    return [
+        {
+            "id": t.id,
+            "name": t.checklist_item.name if t.checklist_item else "Unknown Task",
+            "category": t.checklist_item.category if t.checklist_item else "General",
+            "required": t.checklist_item.required if t.checklist_item else False,
+            "status": t.status,
+            "uploaded_file": t.uploaded_file
+        }
+        for t in tasks
+    ]
 
 # --- Public/Portal Endpoints (Token Based) ---
 
@@ -98,7 +112,7 @@ def respond_to_offer(
 @router.post("/portal/{token}/upload")
 async def upload_candidate_document(
     token: str,
-    checklist_item_id: int = Form(...),
+    task_id: int = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -115,7 +129,7 @@ async def upload_candidate_document(
     if file.size and file.size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail=f"File {filename} exceeds 10MB limit")
 
-    file_path = onboarding_service.upload_document_via_token(db, token, checklist_item_id, file)
+    file_path = onboarding_service.upload_document_via_token(db, token, task_id, file)
     return {"message": "Document uploaded successfully", "file_path": file_path}
 
 # --- Existing Upload Endpoint (Refined) ---

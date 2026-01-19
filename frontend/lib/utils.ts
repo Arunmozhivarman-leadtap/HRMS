@@ -11,6 +11,15 @@ export function getPhotoUrl(photoPath?: string | null) {
   return `${baseUrl}/uploads/${photoPath}`;
 }
 
+export function getFileUrl (path?: string)  {
+        if (!path) return "#"
+        // Remove "uploads/" prefix if path already has it (safety check)
+        const cleanPath = path.startsWith("uploads/") ? path.replace("uploads/", "") : path;
+        return `${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000")
+                .replace(/\/api\/?$/, "")
+            }/uploads/${cleanPath}`;
+    }
+
 export function formatErrorMessage(error: any): string {
   if (typeof error === "string") return error;
 

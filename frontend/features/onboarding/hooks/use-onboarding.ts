@@ -59,8 +59,8 @@ export function useUploadOnboardingDoc(token: string) {
         mutationFn: async ({ taskId, file }: { taskId: number; file: File }) => {
             const formData = new FormData();
             formData.append("file", file);
-            formData.append("checklist_item_id", taskId.toString());
-            
+            formData.append("task_id", taskId.toString());
+
             // Use the token-based endpoint
             return fetcher(`/onboarding/portal/${token}/upload`, {
                 method: "POST",

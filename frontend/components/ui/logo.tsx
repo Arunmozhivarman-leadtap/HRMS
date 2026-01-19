@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useCompanySettings } from "@/hooks/use-settings";
+import Image from "next/image";
 
 export function Logo({ className }: { className?: string }) {
   const { data: settings } = useCompanySettings();
@@ -11,9 +12,11 @@ export function Logo({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-xs", className)}>
       {logoUrl ? (
-        <img
+        <Image
           src={logoUrl}
           alt={settings?.company_name || "Company Logo"}
+          width={100}
+          height={100}
           className="h-auto w-[60px] object-contain"
           onError={(e) => {
             // Fallback if image fails to load

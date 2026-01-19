@@ -40,6 +40,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useConvertCandidate } from "@/features/onboarding/hooks/use-onboarding"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { SimpleDialog } from "@/components/ui/simple-dialog"
 
 export default function RecruitmentDashboard() {
     const { data: candidates, isLoading } = useCandidates()
@@ -55,6 +56,8 @@ export default function RecruitmentDashboard() {
     const [offerDialogOpen, setOfferDialogOpen] = useState(false)
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
     const [reviewDialogOpen, setReviewDialogOpen] = useState(false)
+    const [activateDialogOpen, setActivateDialogOpen] = useState(false)
+    const [activateId, setActivateId] = useState<number | null>(null)
 
     const filteredCandidates = candidates?.filter(c => {
         const matchesSearch = c.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -77,23 +80,31 @@ export default function RecruitmentDashboard() {
     }
 
     const handleActivate = (id: number) => {
-        if (confirm("Are you sure you want to activate this candidate as an employee? This will create their user account and work email.")) {
-            activateMutation.mutate(id, {
-                onSuccess: (res) => {
-                    toast({
-                        title: "Activation Successful",
-                        description: `Employee record created successfully.`,
-                    })
-                },
-                onError: (err: any) => {
-                    toast({
-                        title: "Activation Failed",
-                        description: err.message || "An unexpected error occurred",
-                        variant: "destructive"
-                    })
-                }
-            })
-        }
+        setActivateId(id)
+        setActivateDialogOpen(true)
+    }
+
+    const confirmActivation = () => {
+        if (!activateId) return
+
+        activateMutation.mutate(activateId, {
+            onSuccess: (res) => {
+                toast({
+                    title: "Activation Successful",
+                    description: `Employee record created successfully.`,
+                })
+                setActivateDialogOpen(false)
+                setActivateId(null)
+            },
+            onError: (err: any) => {
+                toast({
+                    title: "Activation Failed",
+                    description: err.message || "An unexpected error occurred",
+                    variant: "destructive"
+                })
+                setActivateDialogOpen(false) // Optional: keep open on error? No, better close.
+            }
+        })
     }
 
     const getStatusBadge = (status: CandidateStatus) => {
@@ -127,8 +138,8 @@ export default function RecruitmentDashboard() {
                             <Plus className="mr-2 h-4 w-4" /> New Candidate
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
+                    <DialogContent className="sm:max-w-5xl max-h-[92vh] overflow-y-auto p-0">
+                        <DialogHeader className="p-6 pb-4 border-b">
                             <DialogTitle className="text-xl font-serif">Add New Candidate</DialogTitle>
                             <DialogDescription>Enter candidate details to begin recruitment.</DialogDescription>
                         </DialogHeader>
@@ -358,6 +369,21 @@ export default function RecruitmentDashboard() {
                     onOpenChange={setReviewDialogOpen}
                 />
             )}
+
+            <SimpleDialog
+                isOpen={activateDialogOpen}
+                onClose={() => setActivateDialogOpen(false)}
+                title="Confirm Activation"
+                description="Are you sure you want to activate this candidate as an employee? This will create their user account and work email."
+            >
+                <div className="flex justify-end gap-3">
+                    <Button variant="outline" onClick={() => setActivateDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={confirmActivation} disabled={activateMutation.isPending}>
+                        {activateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Confirm Activation
+                    </Button>
+                </div>
+            </SimpleDialog>
         </div>
     )
 }

@@ -18,7 +18,6 @@ export interface CandidateResponse {
     reporting_manager_id: number;
     employment_type: string;
     expected_joining_date: string;
-    work_location?: string;
     ctc?: number;
     salary_structure?: any;
     status: CandidateStatus;
@@ -33,6 +32,8 @@ export interface PortalAccessResponse {
     candidate: CandidateResponse;
     checklist: OnboardingTask[];
     offer_valid: boolean;
+    company_name: string;
+    logo_url?: string | null;
 }
 
 export interface OnboardingTask {
@@ -53,9 +54,12 @@ export interface OnboardingChecklistItem {
 
 export interface OnboardingTaskDetail {
     id: number;
+    // candidate_id and checklist_item_id might still be relevant internally but purely for display we rely on flattened fields
     candidate_id: number;
     checklist_item_id: number;
     status: string;
     uploaded_file?: string;
-    checklist_item: OnboardingChecklistItem;
+    name: string;
+    category: string;
+    required: boolean;
 }

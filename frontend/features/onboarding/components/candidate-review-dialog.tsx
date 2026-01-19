@@ -11,8 +11,9 @@ import { useCandidateTasks } from "../hooks/use-onboarding"
 import { CandidateResponse } from "@/types/onboarding"
 import { Loader2, FileText, CheckCircle2, XCircle, AlertCircle, Download, ExternalLink } from "lucide-react"
 import { format, parseISO } from "date-fns"
-import { cn } from "@/lib/utils"
+import { cn, getFileUrl } from "@/lib/utils"
 import { ScrollArea } from "@radix-ui/react-scroll-area"
+import Link from "next/link"
 
 interface CandidateReviewDialogProps {
     candidate: CandidateResponse
@@ -23,20 +24,11 @@ interface CandidateReviewDialogProps {
 export function CandidateReviewDialog({ candidate, open, onOpenChange }: CandidateReviewDialogProps) {
     const { data: tasks, isLoading } = useCandidateTasks(candidate.id)
 
-    const getFileUrl = (path: string) => {
-        // Assuming backend serves uploads from /uploads
-        // If stored as "candidates/1/file.pdf", we need a full URL.
-        // Backend mounts /uploads -> settings.UPLOAD_ROOT
-        
-        // Remove "uploads/" prefix if path already has it (safety check)
-        const cleanPath = path.startsWith("uploads/") ? path.replace("uploads/", "") : path;
-        
-        return `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/uploads/${cleanPath}`
-    }
+  
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+            <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
                 <DialogHeader>
                     <div className="flex items-center gap-3">
                         <DialogTitle className="text-xl font-serif">Document Review</DialogTitle>
@@ -47,7 +39,7 @@ export function CandidateReviewDialog({ candidate, open, onOpenChange }: Candida
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-hidden min-h-[300px]">
+                <div className="flex-1 overflow-y-auto min-h-[300px]">
                     {isLoading ? (
                         <div className="h-full flex items-center justify-center">
                             <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
@@ -70,12 +62,12 @@ export function CandidateReviewDialog({ candidate, open, onOpenChange }: Candida
                                         </div>
                                         <div className="flex-1 space-y-1">
                                             <div className="flex items-center justify-between">
-                                                <p className="font-semibold text-sm">{task.checklist_item.name}</p>
+                                                <p className="font-semibold text-sm">{task.name}</p>
                                                 <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-bold">
-                                                    {task.checklist_item.category}
+                                                    {task.category}
                                                 </Badge>
                                             </div>
-                                            
+
                                             {task.uploaded_file ? (
                                                 <div className="flex items-center gap-3 mt-2 bg-muted/40 p-2 rounded-lg border border-dashed">
                                                     <FileText className="h-3.5 w-3.5 text-primary" />
@@ -84,9 +76,9 @@ export function CandidateReviewDialog({ candidate, open, onOpenChange }: Candida
                                                     </span>
                                                     <div className="ml-auto flex gap-1">
                                                         <Button size="sm" variant="ghost" className="h-6 w-6 p-0" asChild>
-                                                            <a href={getFileUrl(task.uploaded_file)} target="_blank" rel="noopener noreferrer">
+                                                            <Link href={getFileUrl(task.uploaded_file)} target="_blank" rel="noopener noreferrer">
                                                                 <ExternalLink className="h-3 w-3" />
-                                                            </a>
+                                                            </Link>
                                                         </Button>
                                                     </div>
                                                 </div>

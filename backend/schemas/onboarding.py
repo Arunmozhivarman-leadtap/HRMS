@@ -14,7 +14,6 @@ class CandidateBase(BaseModel):
     reporting_manager_id: int
     employment_type: str
     expected_joining_date: date
-    work_location: Optional[str] = "Office"
     ctc: Optional[int] = None
     salary_structure: Optional[Dict[str, Any]] = None
     
@@ -57,9 +56,36 @@ class OfferGenerationRequest(BaseModel):
 
 # --- Portal (Candidate View) ---
 
+class OnboardingChecklistItemSchema(BaseModel):
+    id: int
+    name: str
+    category: str
+    required: bool
+
+    class Config:
+        from_attributes = True
+
+class OnboardingTaskDetail(BaseModel):
+    id: int
+    name: str  # Flattened from checklist_item for simpler response if needed, or stick to nested
+    category: str
+    required: bool
+    status: str
+    uploaded_file: Optional[str] = None
+    
+    # or if we are keeping the previous structure from service:
+    # id: int
+    # name: str
+    # category: str
+    # required: bool
+    # status: str
+    # uploaded_file: Optional[str] = None
+
 class PortalAccessResponse(BaseModel):
     candidate: CandidateResponse
-    checklist: List[Dict[str, Any]] # List of tasks with status
+    checklist: List[Dict[str, Any]] # Revert to generic dict or define a clean schema that matches service output
+    company_name: str
+    logo_url: Optional[str] = None
     offer_valid: bool
 
 class OfferActionRequest(BaseModel):
@@ -73,22 +99,3 @@ class OnboardingTaskResponse(BaseModel):
     required: bool
     uploaded_file: Optional[str] = None
 
-class OnboardingChecklistItemSchema(BaseModel):
-    id: int
-    name: str
-    category: str
-    required: bool
-
-    class Config:
-        from_attributes = True
-
-class OnboardingTaskDetail(BaseModel):
-    id: int
-    candidate_id: int
-    checklist_item_id: int
-    status: str
-    uploaded_file: Optional[str] = None
-    checklist_item: OnboardingChecklistItemSchema
-
-    class Config:
-        from_attributes = True
