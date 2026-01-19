@@ -1,14 +1,14 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from typing import List, Optional, Any, Tuple
-from backend.models.settings import CompanySettings, EmploymentType
-from backend.models.department import Department
-from backend.models.master_data import Designation
-from backend.schemas.settings import (
+from models.settings import CompanySettings, EmploymentType
+from models.department import Department
+from models.master_data import Designation
+from schemas.settings import (
     CompanySettingsUpdate, DepartmentCreate, DesignationCreate, 
     EmploymentTypeCreate
 )
-from backend.utils.audit import log_action
+from utils.audit import log_action
 
 class SettingsService:
     # --- Company Settings (Singleton) ---

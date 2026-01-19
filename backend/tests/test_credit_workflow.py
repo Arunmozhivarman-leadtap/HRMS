@@ -2,11 +2,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import date
-from backend.core.config import settings
-from backend.models.employee import Employee
-from backend.models.leave_credit import LeaveCreditRequest, LeaveCreditStatus
-from backend.services.leave_service import leave_service
-from backend.schemas.leave_credit import LeaveCreditRequestCreate
+from core.config import settings
+from models.employee import Employee
+from models.leave_credit import LeaveCreditRequest, LeaveCreditStatus
+from services.leave_service import leave_service
+from schemas.leave_credit import LeaveCreditRequestCreate
 
 # Setup DB
 engine = create_engine(str(settings.DATABASE_URL))

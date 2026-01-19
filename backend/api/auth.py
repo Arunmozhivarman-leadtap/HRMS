@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, status, Body, Response
 from sqlalchemy.orm import Session
-from backend.core.database import get_db
-from backend.core.dependencies import get_current_user
-from backend.schemas.auth import LoginRequest, Token, SSOLoginRequest
-from backend.services.auth_service import auth_service
-from backend.core.config import settings
+from core.database import get_db
+from core.dependencies import get_current_user
+from schemas.auth import LoginRequest, Token, SSOLoginRequest
+from services.auth_service import auth_service
+from core.config import settings
 
 router = APIRouter()
 

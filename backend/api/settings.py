@@ -1,19 +1,19 @@
 from fastapi import APIRouter, Depends, status, Request, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from backend.core.database import get_db
-from backend.core.dependencies import get_current_user
-from backend.core.permissions import role_required
-from backend.models.user import User, UserRole
-from backend.services.settings_service import settings_service
-from backend.schemas.settings import (
+from core.database import get_db
+from core.dependencies import get_current_user
+from core.permissions import role_required
+from models.user import User, UserRole
+from services.settings_service import settings_service
+from schemas.settings import (
     CompanySettingsResponse, CompanySettingsUpdate,
     DepartmentResponse, DepartmentCreate,
     DesignationResponse, DesignationCreate,
     EmploymentTypeResponse, EmploymentTypeCreate,
 )
-from backend.schemas.api import PaginatedResponse
-from backend.utils.file_storage import upload_file
+from schemas.api import PaginatedResponse
+from utils.file_storage import upload_file
 
 router = APIRouter()
 

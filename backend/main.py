@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from backend.core.config import settings
-from backend.core.database import Base, engine
-from backend.api import auth, users, leaves, documents, onboarding, employees, settings as settings_api, dashboard
+from core.config import settings
+from core.database import Base, engine
+from api import auth, users, leaves, documents, onboarding, employees, settings as settings_api, dashboard
 
 # Create database tables
 Base.metadata.create_all(bind=engine)

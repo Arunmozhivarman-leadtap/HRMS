@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List, Optional, Tuple
-from backend.models.employee import Employee
-from backend.models.user import User
+from models.employee import Employee
+from models.user import User
 from datetime import datetime
 
 class EmployeeRepository:

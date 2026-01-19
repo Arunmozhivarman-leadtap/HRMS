@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Enum, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from backend.core.database import Base
+from core.database import Base
 import enum
 
 class DocumentType(str, enum.Enum):

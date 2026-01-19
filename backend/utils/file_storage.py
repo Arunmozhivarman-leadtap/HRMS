@@ -3,7 +3,7 @@ import uuid
 import shutil
 from pathlib import Path
 from fastapi import UploadFile
-from backend.core.config import settings
+from core.config import settings
 
 def upload_file(file: UploadFile, sub_folder: str) -> str:
     """

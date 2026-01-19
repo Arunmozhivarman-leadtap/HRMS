@@ -11,8 +11,8 @@ from sqlalchemy.orm import sessionmaker, Session
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from main import app
-from backend.core.database import Base, get_db
-from backend.core.config import settings
+from core.database import Base, get_db
+from core.config import settings
 
 # Use a test database or an in-memory SQLite for speed/isolation if possible, 
 # but for this audit we might want to test against a real DB structure.

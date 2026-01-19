@@ -2,12 +2,8 @@ import sys
 from pathlib import Path
 from datetime import date
 
-# Add project root to python path
-project_root = Path(__file__).resolve().parents[1]
-sys.path.append(str(project_root))
-
-from backend.core.database import SessionLocal
-from backend.models.leave import PublicHoliday, HolidayType
+from core.database import SessionLocal
+from models.leave import PublicHoliday, HolidayType
 
 def seed_holidays():
     db = SessionLocal()

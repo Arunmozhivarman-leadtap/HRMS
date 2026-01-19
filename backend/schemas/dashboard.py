@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 from datetime import date
-from backend.models.leave import LeaveApplicationStatus
+from models.leave import LeaveApplicationStatus
 
 class Celebration(BaseModel):
     employee_id: int

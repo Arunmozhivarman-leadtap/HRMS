@@ -1,8 +1,8 @@
 
 from sqlalchemy import create_engine, text
-from backend.core.config import settings
-from backend.core.database import Base, engine as db_engine
-import backend.models # Register all models
+from core.config import settings
+from core.database import Base, engine as db_engine
+import models # Register all models
 
 def migrate():
     print("Starting manual migration...")

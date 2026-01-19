@@ -1,11 +1,11 @@
 import pytest
 from datetime import date, timedelta
 from decimal import Decimal
-from backend.models.leave import LeaveBalance, LeaveType, LeaveTypeEnum, LeaveApplication, LeaveApplicationStatus
-from backend.services.leave_service import leave_service
-from backend.schemas.leave import LeaveApplicationCreate
-from backend.models.employee import Employee
-from backend.models.leave import PublicHoliday, HolidayType
+from models.leave import LeaveBalance, LeaveType, LeaveTypeEnum, LeaveApplication, LeaveApplicationStatus
+from services.leave_service import leave_service
+from schemas.leave import LeaveApplicationCreate
+from models.employee import Employee
+from models.leave import PublicHoliday, HolidayType
 
 # Helper to create a dummy employee
 def create_test_employee(db, employee_id=1):

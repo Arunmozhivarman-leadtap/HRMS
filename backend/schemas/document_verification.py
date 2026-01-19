@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from backend.models.document import DocumentVerificationStatus
+from models.document import DocumentVerificationStatus
 
 class DocumentVerificationUpdate(BaseModel):
     status: DocumentVerificationStatus

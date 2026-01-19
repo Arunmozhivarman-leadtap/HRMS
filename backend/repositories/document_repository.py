@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from backend.models.document import EmployeeDocument, DocumentVerificationStatus
-from backend.schemas.document import DocumentCreate, DocumentUpdate
+from models.document import EmployeeDocument, DocumentVerificationStatus
+from schemas.document import DocumentCreate, DocumentUpdate
 
 class DocumentRepository:
     def create(self, db: Session, obj_in: EmployeeDocument) -> EmployeeDocument:

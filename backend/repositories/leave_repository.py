@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, func, select, text
 from typing import List, Optional, Tuple
 from datetime import date
-from backend.models.leave import LeaveType, LeaveBalance, LeaveApplication, PublicHoliday, LeaveApplicationStatus
-from backend.models.employee import Employee
+from models.leave import LeaveType, LeaveBalance, LeaveApplication, PublicHoliday, LeaveApplicationStatus
+from models.employee import Employee
 
 class LeaveRepository:
     # Leave Types

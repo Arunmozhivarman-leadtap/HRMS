@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Dict, Any
 from datetime import date, datetime
-from backend.models.candidate import CandidateStatus
+from models.candidate import CandidateStatus
 
 # --- Candidate Management (Admin) ---
 

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import date, datetime
 from typing import Optional, List
-from backend.models.document import DocumentType, DocumentVerificationStatus
+from models.document import DocumentType, DocumentVerificationStatus
 
 class EmployeeSimple(BaseModel):
     id: int

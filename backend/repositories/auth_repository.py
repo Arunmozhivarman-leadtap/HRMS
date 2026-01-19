@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from backend.models.user import User
+from models.user import User
 
 class AuthRepository:
     def get_user_by_email(self, db: Session, email: str) -> User:

@@ -5,17 +5,17 @@ from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, UploadFile
 
 from pathlib import Path
-from backend.models.candidate import Candidate, CandidateStatus, CandidateOnboardingTask, OnboardingChecklistItem
-from backend.models.employee import Employee
-from backend.models.user import User, UserRole
-from backend.schemas.onboarding import CandidateCreate, CandidateUpdate
-from backend.services.employee_service import employee_service
-from backend.services.leave_service import leave_service
-from backend.services.email_service import email_service
-from backend.schemas.employee import EmployeeCreate
-from backend.core.config import settings
-from backend.utils.audit import log_action
-from backend.utils.file_storage import upload_file, get_file_path
+from models.candidate import Candidate, CandidateStatus, CandidateOnboardingTask, OnboardingChecklistItem
+from models.employee import Employee
+from models.user import User, UserRole
+from schemas.onboarding import CandidateCreate, CandidateUpdate
+from services.employee_service import employee_service
+from services.leave_service import leave_service
+from services.email_service import email_service
+from schemas.employee import EmployeeCreate
+from core.config import settings
+from utils.audit import log_action
+from utils.file_storage import upload_file, get_file_path
 
 class OnboardingService:
     
@@ -102,8 +102,8 @@ class OnboardingService:
         db.commit()
         
         # Fetch Dynamic Details for Email
-        from backend.models.settings import CompanySettings, EmploymentType
-        from backend.models.master_data import Designation
+        from models.settings import CompanySettings, EmploymentType
+        from models.master_data import Designation
         
         company_settings = db.query(CompanySettings).first()
         company_name = company_settings.company_name if company_settings else "LeadTap Digi Solutions"
@@ -187,8 +187,8 @@ Human Resources
         recipients = {settings.SMTP_FROM_EMAIL} # Default HR/Admin email
 
         # Find Creator via Audit Log
-        from backend.models.audit import AuditLog
-        from backend.models.user import User
+        from models.audit import AuditLog
+        from models.user import User
         
         creator_log = db.query(AuditLog).filter(
             AuditLog.entity_type == "Candidate",
@@ -242,7 +242,7 @@ Human Resources
             })
             
         # Fetch Company Settings
-        from backend.models.settings import CompanySettings
+        from models.settings import CompanySettings
         company_settings = db.query(CompanySettings).first()
         company_name = company_settings.company_name if company_settings else "LeadTap Digi Solutions"
         logo_url = company_settings.logo_url if company_settings and hasattr(company_settings, 'logo_url') else None

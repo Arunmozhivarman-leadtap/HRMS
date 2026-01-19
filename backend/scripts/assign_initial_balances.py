@@ -4,16 +4,12 @@ from pathlib import Path
 from datetime import date
 from decimal import Decimal
 
-# Add project root to python path
-project_root = Path(__file__).resolve().parents[1]
-sys.path.append(str(project_root))
-
 from sqlalchemy.orm import Session
-from backend.core.database import SessionLocal
-from backend.models.employee import Employee
-from backend.models.leave import LeaveType, LeaveBalance, LeaveTypeEnum
-from backend.repositories.leave_repository import leave_repository
-from backend.services.leave_service import leave_service
+from core.database import SessionLocal
+from models.employee import Employee
+from models.leave import LeaveType, LeaveBalance, LeaveTypeEnum
+from repositories.leave_repository import leave_repository
+from services.leave_service import leave_service
 
 def main():
     db = SessionLocal()

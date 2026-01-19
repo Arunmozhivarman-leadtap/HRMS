@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from backend.repositories.user_repository import user_repository
-from backend.schemas.employee import EmployeeCreate, BankingInfoUpdate
-from backend.core.security import get_password_hash
-from backend.models.employee import Employee
+from repositories.user_repository import user_repository
+from schemas.employee import EmployeeCreate, BankingInfoUpdate
+from core.security import get_password_hash
+from models.employee import Employee
 
 class UserService:
     def create_user(self, db: Session, user_in: EmployeeCreate):

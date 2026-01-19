@@ -4,18 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, s
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import date
-from backend.core.database import get_db
-from backend.core.dependencies import get_current_user
-from backend.models.user import User, UserRole
-from backend.models.document import DocumentType, EmployeeDocument, DocumentVerificationStatus
-from backend.schemas.document import DocumentResponse, DocumentUpdate
-from backend.schemas.document_verification import DocumentVerificationUpdate
-from backend.models.employee import Employee
-from backend.schemas.api import PaginatedResponse
+from core.database import get_db
+from core.dependencies import get_current_user
+from models.user import User, UserRole
+from models.document import DocumentType, EmployeeDocument, DocumentVerificationStatus
+from schemas.document import DocumentResponse, DocumentUpdate
+from schemas.document_verification import DocumentVerificationUpdate
+from models.employee import Employee
+from schemas.api import PaginatedResponse
 
-from backend.repositories.document_repository import document_repository
-from backend.utils.file_storage import upload_file, get_file_stream, get_file_path, delete_file
-from backend.utils.audit import log_action
+from repositories.document_repository import document_repository
+from utils.file_storage import upload_file, get_file_stream, get_file_path, delete_file
+from utils.audit import log_action
 from fastapi.responses import StreamingResponse
 from fastapi import Request
 

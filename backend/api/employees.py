@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, status, Query, HTTPException, Response, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from backend.core.database import get_db
-from backend.schemas.employee import EmployeeCreate, EmployeeResponse, EmployeeUpdate, EmployeeListResponse
-from backend.services.employee_service import employee_service
-from backend.core.dependencies import get_current_user
-from backend.models.user import User, UserRole
-from backend.core.permissions import role_required
-from backend.utils.file_storage import upload_file
+from core.database import get_db
+from schemas.employee import EmployeeCreate, EmployeeResponse, EmployeeUpdate, EmployeeListResponse
+from services.employee_service import employee_service
+from core.dependencies import get_current_user
+from models.user import User, UserRole
+from core.permissions import role_required
+from utils.file_storage import upload_file
 
 router = APIRouter()
 
@@ -64,7 +64,7 @@ def get_employee(
     # RBAC check for single employee view
     if current_user.role not in [UserRole.super_admin, UserRole.hr_admin]:
         # Manager can view their team
-        from backend.repositories.employee_repository import employee_repository
+        from repositories.employee_repository import employee_repository
         emp = employee_repository.get_employee_by_id(db, employee_id)
         if not emp:
              raise HTTPException(status_code=404, detail="Employee not found")
@@ -76,7 +76,7 @@ def get_employee(
             if emp.id != current_user.employee_id:
                 raise HTTPException(status_code=403, detail="Not authorized to view this employee")
     else:
-        from backend.repositories.employee_repository import employee_repository
+        from repositories.employee_repository import employee_repository
         emp = employee_repository.get_employee_by_id(db, employee_id)
         if not emp:
              raise HTTPException(status_code=404, detail="Employee not found")
@@ -105,7 +105,7 @@ def upload_employee_photo(
         if current_user.employee_id != employee_id:
             raise HTTPException(status_code=403, detail="Not authorized to upload photo for this employee")
     
-    from backend.repositories.employee_repository import employee_repository
+    from repositories.employee_repository import employee_repository
     emp = employee_repository.get_employee_by_id(db, employee_id)
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")

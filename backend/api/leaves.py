@@ -3,18 +3,18 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import date
-from backend.core.database import get_db
-from backend.services.leave_service import leave_service
-from backend.repositories.leave_repository import leave_repository
-from backend.schemas.leave import (
+from core.database import get_db
+from services.leave_service import leave_service
+from repositories.leave_repository import leave_repository
+from schemas.leave import (
     LeaveApplicationCreate, LeaveApplicationResponse, 
     LeaveBalanceResponse, LeaveTypeResponse, PublicHolidayResponse,
     LeaveTypeBase, LeaveApprovalAction, PublicHolidayCreate, PublicHolidayUpdate,
     LeaveRecallRequest
 )
-from backend.schemas.leave_credit import LeaveCreditRequestCreate, LeaveCreditRequestResponse
-from backend.core.dependencies import get_current_user
-from backend.schemas.api import PaginatedResponse
+from schemas.leave_credit import LeaveCreditRequestCreate, LeaveCreditRequestResponse
+from core.dependencies import get_current_user
+from schemas.api import PaginatedResponse
 
 router = APIRouter()
 
@@ -411,7 +411,7 @@ def get_leave_attachment(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    from backend.utils.file_storage import get_file_stream
+    from utils.file_storage import get_file_stream
     import os
     
     app = leave_repository.get_application(db, application_id)

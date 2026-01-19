@@ -4,13 +4,13 @@ from typing import List, Optional, Tuple
 from fastapi import HTTPException, status, UploadFile
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from backend.repositories.leave_repository import leave_repository
-from backend.models.leave import LeaveApplication, LeaveBalance, LeaveTypeEnum, LeaveApplicationStatus, LeaveType, PublicHoliday, LeaveApprovalLog
-from backend.models.leave_credit import LeaveCreditRequest, LeaveCreditStatus
-from backend.models.employee import Employee
-from backend.schemas.leave import LeaveApplicationCreate
-from backend.schemas.leave_credit import LeaveCreditRequestCreate
-from backend.utils.file_storage import upload_file, delete_file
+from repositories.leave_repository import leave_repository
+from models.leave import LeaveApplication, LeaveBalance, LeaveTypeEnum, LeaveApplicationStatus, LeaveType, PublicHoliday, LeaveApprovalLog
+from models.leave_credit import LeaveCreditRequest, LeaveCreditStatus
+from models.employee import Employee
+from schemas.leave import LeaveApplicationCreate
+from schemas.leave_credit import LeaveCreditRequestCreate
+from utils.file_storage import upload_file, delete_file
 
 class LeaveService:
     def initialize_leave_types(self, db: Session):
@@ -617,7 +617,7 @@ class LeaveService:
         
         # 2. Utilization by Department
         # Join Employee -> Department
-        from backend.models.department import Department
+        from models.department import Department
         dept_utilization = db.query(
             Department.name,
             func.sum(LeaveApplication.number_of_days).label('days')
@@ -726,7 +726,7 @@ class LeaveService:
     def get_pending_credit_requests(self, db: Session, manager_id: int, role: str, skip: int = 0, limit: int = 10, search: Optional[str] = None):
         query = db.query(LeaveCreditRequest).filter(LeaveCreditRequest.status == LeaveCreditStatus.pending)
         if role not in ['hr_admin', 'super_admin']:
-            from backend.repositories.leave_repository import leave_repository
+            from repositories.leave_repository import leave_repository
             team_ids = leave_repository.get_team_employee_ids(db, manager_id)
             query = query.filter(LeaveCreditRequest.employee_id.in_(team_ids))
         

@@ -4,10 +4,10 @@ from datetime import date, datetime, timedelta
 from typing import List, Dict, Any, Optional
 import calendar
 
-from backend.models.employee import Employee
-from backend.models.leave import LeaveApplication, LeaveType, LeaveBalance, LeaveApplicationStatus
-from backend.models.document import EmployeeDocument, DocumentVerificationStatus
-from backend.schemas.dashboard import DashboardResponse, DashboardStat, Celebration, LeaveBalanceItem, UpcomingLeave
+from models.employee import Employee
+from models.leave import LeaveApplication, LeaveType, LeaveBalance, LeaveApplicationStatus
+from models.document import EmployeeDocument, DocumentVerificationStatus
+from schemas.dashboard import DashboardResponse, DashboardStat, Celebration, LeaveBalanceItem, UpcomingLeave
 
 class DashboardService:
     def get_dashboard_data(self, db: Session, current_user: Any) -> DashboardResponse:

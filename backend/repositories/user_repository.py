@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from backend.models.employee import Employee
+from models.employee import Employee
 
 class UserRepository:
     def get_user_by_email(self, db: Session, email: str):

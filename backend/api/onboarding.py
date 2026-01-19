@@ -2,17 +2,17 @@ from typing import List, Optional
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Body
 from sqlalchemy.orm import Session, joinedload
-from backend.core.database import get_db
-from backend.models.candidate import CandidateOnboardingTask, Candidate
-from backend.utils.file_storage import upload_file
-from backend.schemas.onboarding import (
+from core.database import get_db
+from models.candidate import CandidateOnboardingTask, Candidate
+from utils.file_storage import upload_file
+from schemas.onboarding import (
     CandidateCreate, CandidateResponse, OfferGenerationRequest, 
     PortalAccessResponse, OfferActionRequest, OnboardingTaskDetail
 )
-from backend.services.onboarding_service import onboarding_service
-from backend.core.dependencies import get_current_user
-from backend.models.user import User, UserRole
-from backend.core.permissions import role_required
+from services.onboarding_service import onboarding_service
+from core.dependencies import get_current_user
+from models.user import User, UserRole
+from core.permissions import role_required
 
 router = APIRouter()
 

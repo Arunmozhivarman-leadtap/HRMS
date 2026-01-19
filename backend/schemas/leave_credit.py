@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date, datetime
-from backend.models.leave_credit import LeaveCreditStatus
+from models.leave_credit import LeaveCreditStatus
 
 class LeaveCreditRequestBase(BaseModel):
     date_worked: date

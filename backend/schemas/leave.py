@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field, condecimal
 from typing import Optional, List
 from datetime import date, datetime
-from backend.models.leave import LeaveTypeEnum, LeaveApplicationStatus, HolidayType
-from backend.schemas.employee import EmployeeResponse
+from models.leave import LeaveTypeEnum, LeaveApplicationStatus, HolidayType
+from schemas.employee import EmployeeResponse
 
 # Leave Type Schemas
 class LeaveTypeBase(BaseModel):

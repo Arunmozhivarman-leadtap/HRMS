@@ -7,15 +7,15 @@ from decimal import Decimal
 project_root = Path(__file__).resolve().parents[1]
 sys.path.append(str(project_root))
 
-from backend.core.database import SessionLocal, engine, Base
-import backend.models
-from backend.services.leave_service import leave_service
-from backend.repositories.leave_repository import leave_repository
-from backend.models.user import User, UserRole
-from backend.models.employee import Employee
-from backend.models.leave import LeaveApplicationStatus, LeaveTypeEnum
-from backend.schemas.leave import LeaveApplicationCreate
-from backend.core.security import get_password_hash
+from core.database import SessionLocal, engine, Base
+import models
+from services.leave_service import leave_service
+from repositories.leave_repository import leave_repository
+from models.user import User, UserRole
+from models.employee import Employee
+from models.leave import LeaveApplicationStatus, LeaveTypeEnum
+from schemas.leave import LeaveApplicationCreate
+from core.security import get_password_hash
 
 def test_leave_flow():
     db = SessionLocal()

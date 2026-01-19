@@ -4,16 +4,12 @@ from pathlib import Path
 import secrets
 import string
 
-# Add project root to python path
-project_root = Path(__file__).resolve().parents[1]
-sys.path.append(str(project_root))
-
 from sqlalchemy.orm import Session
-from backend.core.database import SessionLocal, engine, Base
-from backend.models.user import User, UserRole
-from backend.models.employee import Employee
-from backend.models.department import Department
-from backend.core.security import get_password_hash
+from core.database import SessionLocal, engine, Base
+from models.user import User, UserRole
+from models.employee import Employee
+from models.department import Department
+from core.security import get_password_hash
 
 def generate_secure_password(length=12):
     alphabet = string.ascii_letters + string.digits + "!@#$%^&*"

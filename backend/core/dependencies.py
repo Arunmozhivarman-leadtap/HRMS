@@ -4,9 +4,9 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
-from backend.core.database import get_db
-from backend.core.config import settings
-from backend.repositories.auth_repository import auth_repository
+from core.database import get_db
+from core.config import settings
+from repositories.auth_repository import auth_repository
 
 class OAuth2PasswordBearerWithCookie(OAuth2PasswordBearer):
     """

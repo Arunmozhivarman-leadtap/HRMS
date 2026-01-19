@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, status, Query, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from backend.core.database import get_db
-from backend.schemas.employee import EmployeeCreate, EmployeeResponse, BankingInfoUpdate
-from backend.services.user_service import user_service
-from backend.core.dependencies import get_current_user
-from backend.models.user import User
-from backend.models.employee import Employee
+from core.database import get_db
+from schemas.employee import EmployeeCreate, EmployeeResponse, BankingInfoUpdate
+from services.user_service import user_service
+from core.dependencies import get_current_user
+from models.user import User
+from models.employee import Employee
 
 router = APIRouter()
 

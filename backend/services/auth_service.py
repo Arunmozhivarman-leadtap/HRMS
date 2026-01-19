@@ -2,10 +2,10 @@ from datetime import timedelta
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from jose import jwt, JWTError
-from backend.repositories.auth_repository import auth_repository
-from backend.core.security import verify_password, create_access_token, create_refresh_token
-from backend.core.config import settings
-from backend.schemas.auth import LoginRequest, Token, SSOLoginRequest
+from repositories.auth_repository import auth_repository
+from core.security import verify_password, create_access_token, create_refresh_token
+from core.config import settings
+from schemas.auth import LoginRequest, Token, SSOLoginRequest
 
 class AuthService:
     def authenticate_user(self, db: Session, login_data: LoginRequest) -> Token:

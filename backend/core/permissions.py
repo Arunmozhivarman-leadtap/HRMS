@@ -9,8 +9,8 @@ PERMISSIONS_FILE = Path(__file__).resolve().parents[2] / "docs" / "permissions.j
 
 from functools import wraps
 from fastapi import HTTPException, status, Depends
-from backend.core.dependencies import get_current_user
-from backend.models.user import User, UserRole
+from core.dependencies import get_current_user
+from models.user import User, UserRole
 
 class Permissions:
     _permissions: Dict[str, List[str]] = {}

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from backend.models.audit import AuditLog
+from models.audit import AuditLog
 from typing import Any, Optional
 
 def log_action(

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime
 from sqlalchemy.sql import func
-from backend.core.database import Base
+from core.database import Base
 
 class CompanySettings(Base):
     __tablename__ = "company_settings"
